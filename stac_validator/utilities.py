@@ -181,7 +181,7 @@ def fetch_and_parse_file(input_path: str, headers: Optional[Dict] = None) -> Dic
         raise e
 
 
-@functools.lru_cache(maxsize=48)
+@functools.lru_cache(maxsize=256)
 def fetch_and_parse_schema(input_path: str) -> Dict:
     """Fetches and parses a JSON schema file from a URL or local file using a cache.
 
