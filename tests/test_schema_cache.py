@@ -2,7 +2,11 @@
 
 import pytest
 
-from stac_validator.utilities import fetch_and_parse_schema, set_schema_cache_size, DEFAULT_SCHEMA_CACHE_SIZE
+from stac_validator.utilities import (
+    DEFAULT_SCHEMA_CACHE_SIZE,
+    fetch_and_parse_schema,
+    set_schema_cache_size,
+)
 from stac_validator.validate import StacValidate
 
 
