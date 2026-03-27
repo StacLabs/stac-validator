@@ -237,7 +237,7 @@ def recursive_validation_summary(message: List[Dict[str, Any]]) -> None:
     "--schema-cache-size",
     type=int,
     default=None,
-    help="Max number of schema entries to cache in memory. Use 0 to disable schema caching.",
+    help="Max number of schema entries to cache in memory. Use 0 to disable schema caching. Defaults to 16.",
 )
 def main(
     stac_file: str,
@@ -287,7 +287,7 @@ def main(
         log_file (str): Path to a log file to save full recursive output.
         pydantic (bool): Whether to validate using stac-pydantic models for enhanced type checking and validation.
         verbose (bool): Whether to enable verbose output. This will output additional information during validation.
-        schema_cache_size (Optional[int]): Maximum schema cache size. Use 0 to disable caching.
+        schema_cache_size (Optional[int]): Maximum schema cache size. Use 0 to disable caching. Defaults to 16.
 
     Returns:
         None

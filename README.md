@@ -261,6 +261,17 @@ print(stac.message)
 ```
 
 
+**Item Collection**
+
+```python
+from stac_validator import stac_validator
+
+stac = stac_validator.StacValidate()
+stac.validate_item_collection_dict(item_collection_dict)
+print(stac.message)
+```
+
+
 ### Schema Cache Settings
 
 Schema caching is process-wide and configured separately from `StacValidate` instantiation.
@@ -290,18 +301,6 @@ Notes:
 - `StacValidate()` and `validate_dict()` do not accept a cache-size parameter.
 - Changing cache size at runtime replaces the cache instance and drops existing cached entries.
 - In multi-worker deployments, configure cache size in each worker process.
-
-
-
-**Item Collection**
-
-```python
-from stac_validator import stac_validator
-
-stac = stac_validator.StacValidate()
-stac.validate_item_collection_dict(item_collection_dict)
-print(stac.message)
-```
 
 ## Deployment
 
