@@ -274,14 +274,6 @@ print(stac.message)
 
 ### Schema Cache Settings
 
-Schema caching is process-wide and configured separately from `StacValidate` instantiation.
-
-The default is 256.
-
-That comes from utilities.py, where `DEFAULT_SCHEMA_CACHE_SIZE = 256`.
-
-For the README, I would state it plainly in the new cache section:
-
 - Default schema cache size is 16 entries.
 - Use `--schema-cache-size` in the CLI or `set_schema_cache_size(...)` in Python to override it.
 - Use `0` to disable schema caching.
