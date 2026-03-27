@@ -6,7 +6,11 @@ Description: Test the validator
 import json
 
 from stac_validator import stac_validator
-from stac_validator.utilities import fetch_and_parse_schema, set_schema_cache_size
+from stac_validator.utilities import (
+    DEFAULT_SCHEMA_CACHE_SIZE,
+    fetch_and_parse_schema,
+    set_schema_cache_size,
+)
 
 
 def test_validate_dict_catalog_v1rc2():
@@ -88,5 +92,5 @@ def test_validate_dict_does_not_configure_schema_cache_size():
         # Running validate_dict should use the configured cache size, not override it.
         assert fetch_and_parse_schema.cache_info().maxsize == 7
     finally:
-        set_schema_cache_size(256)
+        set_schema_cache_size(DEFAULT_SCHEMA_CACHE_SIZE)
         fetch_and_parse_schema.cache_clear()

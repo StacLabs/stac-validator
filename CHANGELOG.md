@@ -338,7 +338,7 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
 [Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v3.11.0..main
-[v3.11.0]: [https://](https://github.com/sparkgeo/stac-validator/compare/v3.10.2..v3.11.0)
+[v3.11.0]: https://github.com/sparkgeo/stac-validator/compare/v3.10.2..v3.11.0
 [v3.10.2]: https://github.com/sparkgeo/stac-validator/compare/v3.10.1..v3.10.2
 [v3.10.1]: https://github.com/sparkgeo/stac-validator/compare/v3.10.0..v3.10.1
 [v3.10.0]: https://github.com/sparkgeo/stac-validator/compare/v3.9.3..v3.10.0
