@@ -23,6 +23,7 @@
 - [Usage](#usage)
   - [CLI](#cli)
   - [Python](#python)
+- [Schema Cache Settings](#schema-cache-settings)
 - [Examples](#additional-examples)
   - [Core Validation](#--core)
   - [Custom Schema](#--custom)
@@ -178,6 +179,8 @@ Options:
                                   (local filepath).
   --pydantic                      Validate using stac-pydantic models for enhanced
                                   type checking and validation.
+    --schema-cache-size INTEGER     Max number of schema entries to cache in
+                                                                    memory. Use 0 to disable schema caching.
   --schema-config TEXT            Path to a YAML or JSON schema config file.
   --verbose                       Enable verbose output. This will output
                                   additional information during validation.
@@ -243,6 +246,52 @@ stac = stac_validator.StacValidate()
 stac.validate_dict(dictionary)
 print(stac.message)
 ```
+
+Set schema cache size
+```python
+from stac_validator import stac_validator
+from stac_validator.utilities import set_schema_cache_size
+
+# Set once at app startup (process-wide)
+set_schema_cache_size(16)  # use 0 to disable caching
+
+stac = stac_validator.StacValidate()
+stac.validate_dict(dictionary)
+print(stac.message)
+```
+
+
+### Schema Cache Settings
+
+Schema caching is process-wide and configured separately from `StacValidate` instantiation.
+
+The default is 256.
+
+That comes from utilities.py, where `DEFAULT_SCHEMA_CACHE_SIZE = 256`.
+
+For the README, I would state it plainly in the new cache section:
+
+- Default schema cache size is 16 entries.
+- Use `--schema-cache-size` in the CLI or `set_schema_cache_size(...)` in Python to override it.
+- Use `0` to disable schema caching.
+
+Use `set_schema_cache_size` once at application startup:
+
+```python
+from stac_validator.utilities import set_schema_cache_size
+
+# Examples:
+set_schema_cache_size(16)  # small cache for low-memory deployments
+set_schema_cache_size(64)  # moderate cache for long-running services
+set_schema_cache_size(0)   # disable schema caching
+```
+
+Notes:
+- `StacValidate()` and `validate_dict()` do not accept a cache-size parameter.
+- Changing cache size at runtime replaces the cache instance and drops existing cached entries.
+- In multi-worker deployments, configure cache size in each worker process.
+
+
 
 **Item Collection**
 

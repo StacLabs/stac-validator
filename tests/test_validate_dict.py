@@ -6,6 +6,7 @@ Description: Test the validator
 import json
 
 from stac_validator import stac_validator
+from stac_validator.utilities import fetch_and_parse_schema, set_schema_cache_size
 
 
 def test_validate_dict_catalog_v1rc2():
@@ -65,3 +66,27 @@ def test_incorrect_validate_dict_return_method():
         good_stac = json.load(f)
         bad_stac = good_stac.pop("type", None)
     assert stac.validate_dict(bad_stac) is False
+
+
+def test_validate_dict_does_not_configure_schema_cache_size():
+    try:
+        set_schema_cache_size(7)
+        fetch_and_parse_schema.cache_clear()
+
+        stac = stac_validator.StacValidate()
+
+        # Instantiating StacValidate should not change cache configuration.
+        assert fetch_and_parse_schema.cache_info().maxsize == 7
+
+        with open(
+            "tests/test_data/1rc2/extensions-collection/collection.json", "r"
+        ) as f:
+            good_stac = json.load(f)
+
+        stac.validate_dict(good_stac)
+
+        # Running validate_dict should use the configured cache size, not override it.
+        assert fetch_and_parse_schema.cache_info().maxsize == 7
+    finally:
+        set_schema_cache_size(256)
+        fetch_and_parse_schema.cache_clear()

@@ -181,7 +181,44 @@ def fetch_and_parse_file(input_path: str, headers: Optional[Dict] = None) -> Dic
         raise e
 
 
-@functools.lru_cache(maxsize=256)
+DEFAULT_SCHEMA_CACHE_SIZE = 16
+
+
+def _build_schema_cache(maxsize: int):
+    @functools.lru_cache(maxsize=maxsize)
+    def _cached_fetch(input_path: str) -> Dict:
+        return fetch_and_parse_file(input_path)
+
+    return _cached_fetch
+
+
+_schema_cache = _build_schema_cache(DEFAULT_SCHEMA_CACHE_SIZE)
+
+
+def set_schema_cache_size(maxsize: int) -> None:
+    """Reconfigure the schema cache max size at runtime.
+
+    Args:
+        maxsize: Maximum number of cached schema entries. Use 0 to disable caching.
+
+    Raises:
+        ValueError: If maxsize is negative.
+    """
+    if maxsize < 0:
+        raise ValueError("schema cache size must be greater than or equal to 0")
+
+    global _schema_cache
+    _schema_cache = _build_schema_cache(maxsize)
+
+
+def _fetch_and_parse_schema_cache_info():
+    return _schema_cache.cache_info()
+
+
+def _fetch_and_parse_schema_cache_clear() -> None:
+    _schema_cache.cache_clear()
+
+
 def fetch_and_parse_schema(input_path: str) -> Dict:
     """Fetches and parses a JSON schema file from a URL or local file using a cache.
 
@@ -201,7 +238,11 @@ def fetch_and_parse_schema(input_path: str) -> Dict:
         ValueError: If the input is not a valid URL or local file path.
         requests.exceptions.RequestException: If there is an error while downloading the file.
     """
-    return fetch_and_parse_file(input_path)
+    return _schema_cache(input_path)
+
+
+fetch_and_parse_schema.cache_info = _fetch_and_parse_schema_cache_info  # type: ignore[attr-defined]
+fetch_and_parse_schema.cache_clear = _fetch_and_parse_schema_cache_clear  # type: ignore[attr-defined]
 
 
 def set_schema_addr(version: str, stac_type: str) -> str:
