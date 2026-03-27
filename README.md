@@ -179,8 +179,7 @@ Options:
                                   (local filepath).
   --pydantic                      Validate using stac-pydantic models for enhanced
                                   type checking and validation.
-    --schema-cache-size INTEGER     Max number of schema entries to cache in
-                                                                    memory. Use 0 to disable schema caching.
+  --schema-cache-size INTEGER     Max number of schema entries to cache in memory. Use 0 to disable schema caching. Defaults to 16.
   --schema-config TEXT            Path to a YAML or JSON schema config file.
   --verbose                       Enable verbose output. This will output
                                   additional information during validation.
@@ -567,11 +566,13 @@ The following organizations have contributed time and/or funding to support the 
 - [Healy Hyperspatial](https://healy-hyperspatial.github.io/)
 - [Radiant Earth Foundation](https://radiant.earth/)
 - [Sparkgeo](https://sparkgeo.com/)
+- [CloudFerro](https://cloudferro.com/)
 
 <p align="left">
   <a href="https://healy-hyperspatial.github.io/"><img src="https://raw.githubusercontent.com/stac-utils/stac-fastapi-elasticsearch-opensearch/refs/heads/main/assets/hh-logo-blue.png" alt="Healy Hyperspatial" height="100" hspace="20"></a>
   <a href="https://radiant.earth/"><img src="assets/radiant-earth.webp" alt="Radiant Earth Foundation" height="100" hspace="20"></a>
   <a href="https://sparkgeo.com/"><img src="assets/sparkgeo_logo.jpeg" alt="Sparkgeo" height="100" hspace="20"></a>
+  <a href="https://cloudferro.com/"><img src="assets/cloudferro-logo.png" alt="CloudFerro" height="110" hspace="20"></a>
 </p>
 
 
