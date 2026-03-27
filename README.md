@@ -23,6 +23,7 @@
 - [Usage](#usage)
   - [CLI](#cli)
   - [Python](#python)
+- [Schema Cache Settings](#schema-cache-settings)
 - [Examples](#additional-examples)
   - [Core Validation](#--core)
   - [Custom Schema](#--custom)
@@ -178,6 +179,7 @@ Options:
                                   (local filepath).
   --pydantic                      Validate using stac-pydantic models for enhanced
                                   type checking and validation.
+  --schema-cache-size INTEGER     Max number of schema entries to cache in memory. Use 0 to disable schema caching. Defaults to 16.
   --schema-config TEXT            Path to a YAML or JSON schema config file.
   --verbose                       Enable verbose output. This will output
                                   additional information during validation.
@@ -244,6 +246,20 @@ stac.validate_dict(dictionary)
 print(stac.message)
 ```
 
+Set schema cache size
+```python
+from stac_validator import stac_validator
+from stac_validator.utilities import set_schema_cache_size
+
+# Set once at app startup (process-wide)
+set_schema_cache_size(16)  # use 0 to disable caching
+
+stac = stac_validator.StacValidate()
+stac.validate_dict(dictionary)
+print(stac.message)
+```
+
+
 **Item Collection**
 
 ```python
@@ -253,6 +269,29 @@ stac = stac_validator.StacValidate()
 stac.validate_item_collection_dict(item_collection_dict)
 print(stac.message)
 ```
+
+
+### Schema Cache Settings
+
+- Default schema cache size is 16 entries.
+- Use `--schema-cache-size` in the CLI or `set_schema_cache_size(...)` in Python to override it.
+- Use `0` to disable schema caching.
+
+Use `set_schema_cache_size` once at application startup:
+
+```python
+from stac_validator.utilities import set_schema_cache_size
+
+# Examples:
+set_schema_cache_size(16)  # small cache for low-memory deployments
+set_schema_cache_size(64)  # moderate cache for long-running services
+set_schema_cache_size(0)   # disable schema caching
+```
+
+Notes:
+- `StacValidate()` and `validate_dict()` do not accept a cache-size parameter.
+- Changing cache size at runtime replaces the cache instance and drops existing cached entries.
+- In multi-worker deployments, configure cache size in each worker process.
 
 ## Deployment
 
@@ -527,11 +566,13 @@ The following organizations have contributed time and/or funding to support the 
 - [Healy Hyperspatial](https://healy-hyperspatial.github.io/)
 - [Radiant Earth Foundation](https://radiant.earth/)
 - [Sparkgeo](https://sparkgeo.com/)
+- [CloudFerro](https://cloudferro.com/)
 
 <p align="left">
   <a href="https://healy-hyperspatial.github.io/"><img src="https://raw.githubusercontent.com/stac-utils/stac-fastapi-elasticsearch-opensearch/refs/heads/main/assets/hh-logo-blue.png" alt="Healy Hyperspatial" height="100" hspace="20"></a>
   <a href="https://radiant.earth/"><img src="assets/radiant-earth.webp" alt="Radiant Earth Foundation" height="100" hspace="20"></a>
   <a href="https://sparkgeo.com/"><img src="assets/sparkgeo_logo.jpeg" alt="Sparkgeo" height="100" hspace="20"></a>
+  <a href="https://cloudferro.com/"><img src="assets/cloudferro-logo.png" alt="CloudFerro" height="110" hspace="20"></a>
 </p>
 
 

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import click  # type: ignore
 
+from .utilities import set_schema_cache_size
 from .validate import StacValidate
 
 
@@ -232,6 +233,12 @@ def recursive_validation_summary(message: List[Dict[str, Any]]) -> None:
     is_flag=True,
     help="Enable verbose output. This will output additional information during validation.",
 )
+@click.option(
+    "--schema-cache-size",
+    type=int,
+    default=None,
+    help="Max number of schema entries to cache in memory. Use 0 to disable schema caching. Defaults to 16.",
+)
 def main(
     stac_file: str,
     collections: bool,
@@ -253,6 +260,7 @@ def main(
     log_file: str,
     pydantic: bool,
     verbose: bool = False,
+    schema_cache_size: Optional[int] = None,
 ):
     """Main function for the `stac-validator` command line tool. Validates a STAC file
     against the STAC specification and prints the validation results to the console as JSON.
@@ -279,6 +287,7 @@ def main(
         log_file (str): Path to a log file to save full recursive output.
         pydantic (bool): Whether to validate using stac-pydantic models for enhanced type checking and validation.
         verbose (bool): Whether to enable verbose output. This will output additional information during validation.
+        schema_cache_size (Optional[int]): Maximum schema cache size. Use 0 to disable caching. Defaults to 16.
 
     Returns:
         None
@@ -294,6 +303,14 @@ def main(
         schema_map_dict: Optional[Dict[str, str]] = None
     else:
         schema_map_dict = dict(schema_map)
+
+    if schema_cache_size is not None:
+        if schema_cache_size < 0:
+            raise click.BadParameter(
+                "must be greater than or equal to 0",
+                param_hint="--schema-cache-size",
+            )
+        set_schema_cache_size(schema_cache_size)
 
     stac = StacValidate(
         stac_file=stac_file,

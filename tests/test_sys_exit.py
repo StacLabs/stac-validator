@@ -30,3 +30,15 @@ def test_false_sys_exit_error_python():
         ["stac-validator", "tests/test_data/v090/items/good_item_v090.json"],
         check=True,
     )
+
+
+def test_cli_schema_cache_size_option():
+    subprocess.run(
+        [
+            "stac-validator",
+            "tests/test_data/v090/items/good_item_v090.json",
+            "--schema-cache-size",
+            "8",
+        ],
+        check=True,
+    )
