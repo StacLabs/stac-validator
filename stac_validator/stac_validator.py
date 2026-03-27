@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import click  # type: ignore
 
+from .batch_validator import validate_concurrently
 from .utilities import set_schema_cache_size
 from .validate import StacValidate
 
@@ -367,5 +368,125 @@ def main(
     sys.exit(0 if valid else 1)
 
 
+@click.command()
+@click.argument("files", nargs=-1, required=True, type=click.Path(exists=True))
+@click.option(
+    "--cores",
+    type=int,
+    default=None,
+    help="Number of CPU cores to use for parallel validation. Defaults to all available cores.",
+)
+@click.option(
+    "--no-progress",
+    is_flag=True,
+    help="Disable progress bar during validation.",
+)
+@click.option(
+    "--no-output",
+    is_flag=True,
+    help="Do not print output to console.",
+)
+@click.option(
+    "--feature-collection",
+    is_flag=True,
+    help="Treat files as GeoJSON FeatureCollections and validate each feature individually.",
+)
+def batch(
+    files: Tuple[str, ...],
+    cores: Optional[int],
+    no_progress: bool,
+    no_output: bool,
+    feature_collection: bool,
+):
+    """Validate multiple STAC files concurrently using all available CPU cores.
+
+    This command uses multiprocessing to validate STAC files in parallel,
+    bypassing Python's Global Interpreter Lock (GIL) for maximum performance.
+    Each CPU core gets its own schema cache, which is warmed up on the first
+    file and reused for subsequent files.
+
+    Examples:
+
+        # Validate all JSON files in a directory
+        stac-validator batch *.json
+
+        # Validate specific files
+        stac-validator batch file1.json file2.json file3.json
+
+        # Use only 4 cores
+        stac-validator batch *.json --cores 4
+
+        # Disable progress bar
+        stac-validator batch *.json --no-progress
+    """
+    if not files:
+        click.secho("Error: No files provided", fg="red")
+        sys.exit(1)
+
+    start_time = time.time()
+
+    try:
+        # Validate concurrently
+        results = validate_concurrently(
+            list(files),
+            max_workers=cores,
+            show_progress=not no_progress,
+            feature_collection=feature_collection,
+        )
+
+        # Print results
+        if not no_output:
+            click.echo(json.dumps(results, indent=4))
+
+        # Calculate statistics
+        valid_count = sum(1 for r in results if r.get("valid_stac", False))
+        invalid_count = len(results) - valid_count
+
+        # Print summary
+        click.secho()
+        click.secho("Validation Summary:", bold=True)
+        click.secho(f"  Total files: {len(results)}")
+        click.secho(f"  ✅ Valid: {valid_count}")
+        click.secho(f"  ❌ Invalid: {invalid_count}")
+
+        # Print details of failed validations
+        if invalid_count > 0:
+            click.secho()
+            click.secho("Failed validations:", fg="red")
+            for result in results:
+                if not result.get("valid_stac", False):
+                    click.secho(f"  {result['path']}", fg="red")
+                    if "errors" in result:
+                        for error in result["errors"][:3]:  # Show first 3 errors
+                            click.secho(f"    - {error}", fg="yellow")
+                        if len(result["errors"]) > 3:
+                            click.secho(
+                                f"    ... and {len(result['errors']) - 3} more errors",
+                                fg="yellow",
+                            )
+
+        duration = time.time() - start_time
+        click.secho()
+        click.secho(f"Validation completed in {format_duration(duration)}", fg="green")
+        click.secho()
+
+        sys.exit(0 if invalid_count == 0 else 1)
+
+    except Exception as e:
+        click.secho(f"Error during batch validation: {e}", fg="red")
+        sys.exit(1)
+
+
+@click.group()
+def cli():
+    """STAC Validator - Validate STAC files against the STAC specification."""
+    pass
+
+
+# Register commands
+cli.add_command(main, name="validate")
+cli.add_command(batch, name="batch")
+
+
 if __name__ == "__main__":
-    main()
+    cli()
