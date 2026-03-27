@@ -6,6 +6,33 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+### Updated
+
+## [v3.11.0] - 2026-03-27
+
+### Added 
+
+- Added a new CLI option --schema-cache-size to control the in-memory schema cache size at runtime.
+- Added support for setting schema cache size to 0 to disable schema caching for low-memory environments.
+
+### Changed 
+
+- Refactored schema caching to support runtime cache reconfiguration while preserving cache inspection and clearing behavior.
+- Added test coverage for:
+  - runtime schema cache size reconfiguration
+  - zero-size cache behavior
+  - negative cache size validation
+  - CLI acceptance of --schema-cache-size
+
+
 ## [v3.10.2] - 2025-11-16
 
 ### Fixed
@@ -310,7 +337,8 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - With the newest version - 1.0.0-beta.2 - items will run through jsonchema validation before the PySTAC validation. The reason for this is that jsonschema will give more informative error messages. This should be addressed better in the future. This is not the case with the --recursive option as time can be a concern here with larger collections.
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
-[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v3.10.2..main
+[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v3.11.0..main
+[v3.11.0]: [https://](https://github.com/sparkgeo/stac-validator/compare/v3.10.2..v3.11.0)
 [v3.10.2]: https://github.com/sparkgeo/stac-validator/compare/v3.10.1..v3.10.2
 [v3.10.1]: https://github.com/sparkgeo/stac-validator/compare/v3.10.0..v3.10.1
 [v3.10.0]: https://github.com/sparkgeo/stac-validator/compare/v3.9.3..v3.10.0
