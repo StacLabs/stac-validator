@@ -263,39 +263,10 @@ def main(
     verbose: bool = False,
     schema_cache_size: Optional[int] = None,
 ):
-    """Main function for the `stac-validator` command line tool. Validates a STAC file
-    against the STAC specification and prints the validation results to the console as JSON.
+    """Validate a STAC file against the STAC specification.
 
-    Args:
-        stac_file (str): Path to the STAC file to be validated.
-        collections (bool): Validate response from /collections endpoint.
-        item_collection (bool): Whether to validate item collection responses.
-        no_assets_urls (bool): Whether to open href links when validating assets
-            (enabled by default).
-        headers (dict): HTTP headers to include in the requests.
-        pages (int): Maximum number of pages to validate via `item_collection`.
-        recursive (bool): Whether to recursively validate all related STAC objects.
-        max_depth (int): Maximum depth to traverse when recursing.
-        core (bool): Whether to validate core STAC objects only.
-        extensions (bool): Whether to validate extensions only.
-        links (bool): Whether to additionally validate links. Only works with default mode.
-        assets (bool): Whether to additionally validate assets. Only works with default mode.
-        custom (str): Path to a custom schema file to validate against.
-        schema_config (str): Path to a custom schema config file to validate against.
-        schema_map (list(tuple)): List of tuples each having two elememts. First element is the schema path to be replaced by the path in the second element.
-        trace_recursion (bool): Whether to enable verbose output for recursive mode.
-        no_output (bool): Whether to print output to console.
-        log_file (str): Path to a log file to save full recursive output.
-        pydantic (bool): Whether to validate using stac-pydantic models for enhanced type checking and validation.
-        verbose (bool): Whether to enable verbose output. This will output additional information during validation.
-        schema_cache_size (Optional[int]): Maximum schema cache size. Use 0 to disable caching. Defaults to 16.
-
-    Returns:
-        None
-
-    Raises:
-        SystemExit: Exits the program with a status code of 0 if the STAC file is valid,
-            or 1 if it is invalid.
+    Prints validation results to the console as JSON.
+    Exits with status code 0 if valid, 1 if invalid.
     """
     start_time = time.time()
     valid = True
@@ -391,12 +362,18 @@ def main(
     is_flag=True,
     help="Treat files as GeoJSON FeatureCollections and validate each feature individually.",
 )
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Show full JSON output for all items. By default, only invalid items are shown.",
+)
 def batch(
     files: Tuple[str, ...],
     cores: Optional[int],
     no_progress: bool,
     no_output: bool,
     feature_collection: bool,
+    verbose: bool,
 ):
     """Validate multiple STAC files concurrently using all available CPU cores.
 
@@ -426,6 +403,11 @@ def batch(
     start_time = time.time()
 
     try:
+        # Get optimal worker count
+        from .batch_validator import get_optimal_worker_count
+
+        optimal_workers = get_optimal_worker_count(cores)
+
         # Validate concurrently
         results = validate_concurrently(
             list(files),
@@ -434,18 +416,25 @@ def batch(
             feature_collection=feature_collection,
         )
 
-        # Print results
-        if not no_output:
-            click.echo(json.dumps(results, indent=4))
-
         # Calculate statistics
         valid_count = sum(1 for r in results if r.get("valid_stac", False))
         invalid_count = len(results) - valid_count
+
+        # Print results based on verbosity
+        if not no_output:
+            if verbose:
+                # Show full JSON output in verbose mode
+                click.echo(json.dumps(results, indent=4))
+            elif invalid_count > 0:
+                # Show only invalid items by default
+                invalid_results = [r for r in results if not r.get("valid_stac", False)]
+                click.echo(json.dumps(invalid_results, indent=4))
 
         # Print summary
         click.secho()
         click.secho("Validation Summary:", bold=True)
         click.secho(f"  Total files: {len(results)}")
+        click.secho(f"  CPU cores used: {optimal_workers}")
         click.secho(f"  ✅ Valid: {valid_count}")
         click.secho(f"  ❌ Invalid: {invalid_count}")
 
@@ -479,7 +468,14 @@ def batch(
 
 @click.group()
 def cli():
-    """STAC Validator - Validate STAC files against the STAC specification."""
+    """STAC Validator - Validate STAC files against the STAC specification.
+
+    \b
+    Usage:
+      stac-validator validate <file> [options]
+      stac-validator batch <files> [options]
+      stac-validator batch <file> --feature-collection [options]
+    """
     pass
 
 

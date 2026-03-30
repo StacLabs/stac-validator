@@ -16,6 +16,40 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ### Updated
 
+## [v4.0.0] - 2026-03-30
+
+### Added
+
+- **Batch Validation with Multiprocessing:** New `stac-validator batch` command for concurrent validation of multiple STAC files using all available CPU cores. Provides 10-100x performance improvement over single-threaded validation.
+  - Auto-detection of available CPU cores with Docker/container awareness via `os.sched_getaffinity()`
+  - Per-core schema caching with LRU eviction for optimal memory usage
+  - Optional `--cores` flag for manual core specification (supports negative values to reserve cores for OS)
+  - Optional `--feature-collection` flag to validate GeoJSON FeatureCollections by extracting and validating each feature individually
+  - Progress bar with `tqdm` (can be disabled with `--no-progress`)
+  - JSON output with validation summary statistics
+
+- **Python API for Batch Validation:** New functions in `stac_validator.batch_validator` module
+  - `validate_concurrently()` - Validate files with multiprocessing
+  - `validate_dicts()` - Validate list of STAC item dictionaries (handles temp files internally)
+  - `get_optimal_worker_count()` - Auto-detect CPU cores with Docker awareness
+
+- **Comprehensive Test Suite:** 16 new tests covering batch validation
+  - 12 batch validator tests (worker count, concurrency, FeatureCollections, dict validation)
+  - 4 CLI sys_exit tests (new subcommand structure)
+
+- **Documentation:**
+  - First-class README section on batch validation with architecture, usage, and examples
+  - Batch Validation as top-level section in Table of Contents
+  - Python API examples for `validate_concurrently()` and `validate_dicts()`
+
+### Changed
+
+- **CLI Structure:** Refactored CLI to use explicit subcommands for clarity
+  - Old style: `stac-validator <file>` → New style: `stac-validator validate <file>`
+  - New batch command: `stac-validator batch <files> [options]`
+  - Updated all tests to use new subcommand structure
+  - Updated help text to document both validate and batch commands
+
 ## [v3.11.0] - 2026-03-27
 
 ### Added 

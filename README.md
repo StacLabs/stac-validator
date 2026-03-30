@@ -22,7 +22,7 @@
 - [Supported STAC Versions](#versions-supported)
 - [Usage](#usage)
   - [CLI](#cli)
-    - [Single File Validation](#single-file-validation)
+    - [Legacy Validation](#legacy-validation)
   - [Batch Validation](#batch-validation)
   - [Python](#python)
 - [Schema Cache Settings](#schema-cache-settings)
@@ -145,7 +145,37 @@ $ stac-validator --help
 ```
 
 ```bash
-Usage: stac-validator [OPTIONS] STAC_FILE
+Usage: stac-validator [OPTIONS] COMMAND [ARGS]...
+
+  STAC Validator - Validate STAC files against the STAC specification.
+
+  Usage:
+    stac-validator validate <file> [options]
+    stac-validator batch <files> [options]
+    stac-validator batch <file> --feature-collection [options]
+      
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  batch     Validate multiple STAC files concurrently using all available...
+  validate  Main function for the `stac-validator` command line tool.
+```
+
+**Validate Command**
+
+```bash
+$ stac-validator validate --help
+```
+
+```bash
+Usage: stac-validator validate [OPTIONS] STAC_FILE
+
+  Validate a STAC file against the STAC specification.
+
+  Prints validation results to the console as JSON. Exits with status code 0
+  if valid, 1 if invalid.
 
 Options:
   --core                          Validate core stac object only without
@@ -157,6 +187,8 @@ Options:
                                   with default mode.
   -c, --custom TEXT               Validate against a custom schema (local
                                   filepath or remote schema).
+  -sc, --schema-config TEXT       Validate against a custom schema config
+                                  (local filepath or remote schema config).
   -s, --schema-map <TEXT TEXT>...
                                   Schema path to replaced by (local) schema
                                   path during validation. Can be used multiple
@@ -179,22 +211,98 @@ Options:
   --no_output                     Do not print output to console.
   --log_file TEXT                 Save full recursive output to log file
                                   (local filepath).
-  --pydantic                      Validate using stac-pydantic models for enhanced
-                                  type checking and validation.
-  --schema-cache-size INTEGER     Max number of schema entries to cache in memory. Use 0 to disable schema caching. Defaults to 16.
-  --schema-config TEXT            Path to a YAML or JSON schema config file.
+  --pydantic                      Validate using stac-pydantic models for
+                                  enhanced type checking and validation.
   --verbose                       Enable verbose output. This will output
                                   additional information during validation.
+  --schema-cache-size INTEGER     Max number of schema entries to cache in
+                                  memory. Use 0 to disable schema caching.
+                                  Defaults to 16.
   --help                          Show this message and exit.
 ```
 
-#### Single File Validation
-
-The `validate` command validates a single STAC file:
+**Batch Command**
 
 ```bash
-$ stac-validator validate path/to/stac_file.json
+$ stac-validator batch --help
 ```
+
+```bash
+Usage: stac-validator batch [OPTIONS] FILES...
+
+  Validate multiple STAC files concurrently using all available CPU cores.
+
+  This command uses multiprocessing to validate STAC files in parallel,
+  bypassing Python's Global Interpreter Lock (GIL) for maximum performance.
+  Each CPU core gets its own schema cache, which is warmed up on the first
+  file and reused for subsequent files.
+
+  Examples:
+
+      # Validate all JSON files in a directory
+      $ stac-validator batch *.json
+
+      # Validate specific files
+      $ stac-validator batch file1.json file2.json file3.json
+
+      # Validate a GeoJSON FeatureCollection (validates each feature individually)
+      $ stac-validator batch --feature-collection sample_data/sentinel-cogs_0_100.json
+
+      # Use only 4 cores
+      $ stac-validator batch *.json --cores 4
+
+      # Disable progress bar
+      $ stac-validator batch *.json --no-progress
+
+Options:
+  --cores INTEGER       Number of CPU cores to use for parallel validation.
+                        Defaults to all available cores.
+  --no-progress         Disable progress bar during validation.
+  --no-output           Do not print output to console.
+  --feature-collection  Treat files as GeoJSON FeatureCollections and validate
+                        each feature individually.
+  --verbose             Show full JSON output for all items. By default, only
+                        invalid items are shown.
+  --help                Show this message and exit.
+```
+
+#### Legacy Validation
+
+The `validate` command is the main legacy validation tool with comprehensive options:
+
+```bash
+# Basic single file validation
+$ stac-validator validate path/to/stac_file.json
+
+# Validate with custom schema
+$ stac-validator validate item.json --custom /path/to/schema.json
+
+# Recursively validate all related STAC objects
+$ stac-validator validate catalog.json --recursive --max-depth 5
+
+# Validate collections endpoint response
+$ stac-validator validate https://example.com/collections --collections
+
+# Validate item collection response
+$ stac-validator validate https://example.com/search --item-collection --pages 10
+
+# Validate with extensions and links
+$ stac-validator validate item.json --extensions --links --assets
+```
+
+**Options include:**
+- `--core` - Validate core STAC only (skip extensions)
+- `--extensions` - Validate extensions only
+- `--links` - Validate link objects
+- `--assets` - Validate asset objects
+- `--recursive` - Recursively validate related STAC objects
+- `--custom` - Validate against custom schema
+- `--schema-map` - Replace schema URLs during validation
+- `--collections` - Validate /collections endpoint response
+- `--item-collection` - Validate item collection responses
+- `--pydantic` - Use Pydantic models for validation
+- `--schema-cache-size` - Configure schema cache size
+- And more (see `stac-validator validate --help`)
 
 #### Batch Validation
 
@@ -248,58 +356,28 @@ $ stac-validator batch *.json --no-output
 **Example Output**
 
 ```bash
-$ stac-validator batch items/*.json
-
-Validating STAC Items: 100%|██████████| 1000/1000 [00:45<00:00, 22.2it/s]
-
+$ stac-validator batch --feature-collection sample_data/sentinel-cogs_0_100.json
 [
     {
-        "path": "items/item1.json",
-        "valid_stac": true
-    },
-    {
-        "path": "items/item2.json",
+        "path": "sample_data/sentinel-cogs_0_100.json[0]",
         "valid_stac": false,
-        "errors": ["Core Schema validation failed: ..."]
-    },
-    ...
-]
-
-Validation Summary:
-  Total files: 1000
-  ✅ Valid: 998
-  ❌ Invalid: 2
-
-Validation completed in 45.23s
-```
-
-**FeatureCollection Example**
-
-```bash
-$ stac-validator batch collection.json --feature-collection
-
-[
-    {
-        "path": "collection.json[0]",
-        "valid_stac": true
-    },
-    {
-        "path": "collection.json[1]",
-        "valid_stac": true
-    },
-    {
-        "path": "collection.json[2]",
-        "valid_stac": false,
-        "errors": ["Missing stac_version field"]
+        "errors": [
+            "'eo:bands' does not match any of the regexes: '^(?!eo:)'. Error is in properties "
+        ]
     }
 ]
 
 Validation Summary:
-  Total files: 3
-  ✅ Valid: 2
+  Total files: 100
+  CPU cores used: 16
+  ✅ Valid: 99
   ❌ Invalid: 1
 
-Validation completed in 2.34s
+Failed validations:
+  sample_data/sentinel-cogs_0_100.json[0]
+    - 'eo:bands' does not match any of the regexes: '^(?!eo:)'. Error is in properties 
+
+Validation completed in 1.10s
 ```
 
 **Performance Characteristics**
@@ -351,65 +429,155 @@ for result in results:
 
 ### Python
 
-**Remote source**
+**Single File Validation**
 
 ```python
 from stac_validator import stac_validator
 
+# Remote source
 stac = stac_validator.StacValidate("https://raw.githubusercontent.com/stac-utils/pystac/main/tests/data-files/examples/0.9.0/collection-spec/examples/landsat-collection.json")
 stac.run()
 print(stac.message)
-```
-```python
-[
-    {
-        "version": "0.9.0",
-        "path": "https://raw.githubusercontent.com/stac-utils/pystac/main/tests/data-files/examples/0.9.0/collection-spec/examples/landsat-collection.json",
-        "schema": [
-            "https://cdn.staclint.com/v0.9.0/collection.json"
-        ],
-        "valid_stac": true,
-        "asset_type": "COLLECTION",
-        "validation_method": "default"
-    }
-]
-```
 
-**Local file**
-
-```python
-from stac_validator import stac_validator
-
+# Local file
 stac = stac_validator.StacValidate("tests/test_data/1beta1/sentinel2.json", extensions=True)
 stac.run()
 print(stac.message)
 ```
-```python
-[
-    {
-        "version": "1.0.0-beta.1",
-        "path": "tests/test_data/1beta1/sentinel2.json",
-        "schema": [
-            "https://cdn.staclint.com/v1.0.0-beta.1/collection.json"
-        ],
-        "valid_stac": true,
-        "asset_type": "COLLECTION",
-        "validation_method": "extensions"
-    }
-]
-```
 
-**Dictionary**
+**Dictionary Validation**
 
 ```python
 from stac_validator import stac_validator
 
 stac = stac_validator.StacValidate()
-stac.validate_dict(dictionary)
+stac.validate_dict(item_dict)
 print(stac.message)
 ```
 
-Set schema cache size
+**Batch Validation - List of Dictionaries**
+
+For validating dictionaries directly without managing temp files, use `validate_dicts()`:
+
+```python
+from stac_validator.batch_validator import validate_dicts
+
+items = [
+    {"type": "Feature", "stac_version": "1.1.0", ...},
+    {"type": "Feature", "stac_version": "1.1.0", ...},
+    {"type": "Feature", "stac_version": "1.1.0", ...},
+]
+
+# Validate all items concurrently (temp files handled internally)
+results = validate_dicts(items, max_workers=None, show_progress=True)
+
+print(f"Total: {len(results)}")
+print(f"Valid: {sum(1 for r in results if r['valid_stac'])}")
+print(f"Invalid: {sum(1 for r in results if not r['valid_stac'])}")
+
+# Process results
+for result in results:
+    if result["valid_stac"]:
+        print(f"✅ Valid")
+    else:
+        print(f"❌ Invalid: {result.get('errors', [])}")
+```
+
+**Parameters:**
+- `items` - List of STAC item dictionaries
+- `max_workers` - CPU cores to use (None = auto-detect, positive int = specific cores, negative int = all minus N)
+- `show_progress` - Display progress bar (default: True)
+- `feature_collection` - Treat items as features from a FeatureCollection (default: False)
+
+**Batch Validation - FeatureCollection (Concurrent with Multiprocessing)**
+
+For FeatureCollection validation with multiprocessing, use `validate_dicts` with `feature_collection=True`:
+
+```python
+from stac_validator.batch_validator import validate_dicts
+import json
+
+# Load FeatureCollection from file
+with open("collection.json") as f:
+    feature_collection = json.load(f)
+
+# Extract features and validate concurrently (10-100x faster for large collections)
+features = feature_collection.get("features", [])
+results = validate_dicts(
+    features,
+    feature_collection=True,
+    max_workers=None  # Auto-detect cores
+)
+
+print(f"Total features: {len(results)}")
+print(f"Valid: {sum(1 for r in results if r['valid_stac'])}")
+print(f"Invalid: {sum(1 for r in results if not r['valid_stac'])}")
+
+# Process results
+for result in results:
+    if result["valid_stac"]:
+        print(f"✅ Feature valid")
+    else:
+        print(f"❌ Feature invalid: {result.get('errors', [])}")
+```
+
+**Batch Validation - Multiple Files**
+
+```python
+from stac_validator.batch_validator import validate_concurrently
+
+files = [
+    "item1.json",
+    "item2.json",
+    "item3.json",
+]
+
+# Validate files concurrently using all available CPU cores
+results = validate_concurrently(
+    files,
+    max_workers=None,  # Auto-detect cores
+    show_progress=True
+)
+
+# Process results
+for result in results:
+    if result["valid_stac"]:
+        print(f"✅ {result['path']}")
+    else:
+        print(f"❌ {result['path']}: {result.get('errors', [])}")
+```
+
+**Batch Validation - FeatureCollection Files**
+
+```python
+from stac_validator.batch_validator import validate_concurrently
+
+files = ["collection1.json", "collection2.json"]
+
+# Validate FeatureCollections by extracting and validating each feature
+results = validate_concurrently(
+    files,
+    feature_collection=True,
+    max_workers=8
+)
+
+# Results show feature index: "collection1.json[0]", "collection1.json[1]", etc.
+for result in results:
+    print(f"{result['path']}: {'✅' if result['valid_stac'] else '❌'}")
+```
+
+**Item Collection Validation**
+
+```python
+from stac_validator import stac_validator
+
+stac = stac_validator.StacValidate()
+stac.validate_item_collection_dict(item_collection_dict)
+print(stac.message)
+```
+
+**Configure Schema Cache Size**
+
 ```python
 from stac_validator import stac_validator
 from stac_validator.utilities import set_schema_cache_size
@@ -419,17 +587,6 @@ set_schema_cache_size(16)  # use 0 to disable caching
 
 stac = stac_validator.StacValidate()
 stac.validate_dict(dictionary)
-print(stac.message)
-```
-
-
-**Item Collection**
-
-```python
-from stac_validator import stac_validator
-
-stac = stac_validator.StacValidate()
-stac.validate_item_collection_dict(item_collection_dict)
 print(stac.message)
 ```
 
