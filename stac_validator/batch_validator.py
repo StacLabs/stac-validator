@@ -5,10 +5,30 @@ import json
 import multiprocessing
 import os
 import tempfile
+from functools import lru_cache
 from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from .utilities import fetch_and_parse_schema
 from .validate import StacValidate
+
+
+@lru_cache(maxsize=128)
+def _get_cached_schema(schema_path: str) -> Dict[str, Any]:
+    """
+    Load and cache a JSON schema.
+
+    Schemas are cached per worker process using functools.lru_cache.
+    This ensures schemas are only fetched once per worker, dramatically
+    improving performance for large batches of similar STAC objects.
+
+    Args:
+        schema_path: Path or URL to the JSON schema.
+
+    Returns:
+        Parsed JSON schema dictionary.
+    """
+    return fetch_and_parse_schema(schema_path)
 
 
 def get_optimal_worker_count(max_workers: Optional[int] = None) -> int:
@@ -62,6 +82,8 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
     Worker function that runs on an individual CPU core.
     Validates a single STAC file and returns results.
 
+    Uses cached schema loading to avoid redundant fetches within each worker process.
+
     Args:
         file_path: Path to the STAC JSON file to validate.
 
@@ -71,9 +93,19 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
     errors = []
 
     try:
-        # Use StacValidate for comprehensive validation (includes version check, core, and extensions)
-        validator = StacValidate(file_path)
-        validator.run()
+        # Monkey-patch fetch_and_parse_schema to use cached version within this worker
+        import stac_validator.utilities as utilities
+
+        original_fetch = utilities.fetch_and_parse_schema
+        utilities.fetch_and_parse_schema = _get_cached_schema
+
+        try:
+            # Use StacValidate for comprehensive validation (includes version check, core, and extensions)
+            validator = StacValidate(file_path)
+            validator.run()
+        finally:
+            # Restore original function
+            utilities.fetch_and_parse_schema = original_fetch
 
         # Collect errors from validation
         # validator.message is a list of result objects
