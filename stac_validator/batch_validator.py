@@ -5,7 +5,7 @@ import json
 import multiprocessing
 import os
 import tempfile
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from .utilities import fetch_and_parse_file, validate_stac_version_field
 from .validate import StacValidate
@@ -291,14 +291,18 @@ def validate_concurrently(
         }
 
         # Wrap the as_completed iterator with tqdm for a nice progress bar
+        iterator: Union[
+            Iterable[concurrent.futures.Future[Tuple[str, bool, List[str]]]],
+            Any,
+        ]
         if show_progress and has_tqdm:
-            iterator = tqdm(  # type: ignore
+            iterator = tqdm(
                 concurrent.futures.as_completed(future_to_file),
                 total=len(file_paths),
                 desc="Validating STAC Items",
             )
         else:
-            iterator = concurrent.futures.as_completed(future_to_file)  # type: ignore
+            iterator = concurrent.futures.as_completed(future_to_file)
 
         for future in iterator:
             file_path, is_valid, errors = future.result()
