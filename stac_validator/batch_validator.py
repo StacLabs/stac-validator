@@ -80,8 +80,8 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
         if not is_valid_version:
             return file_path, False, [f"{err_type}: {err_msg}"]
 
-        # 2. Use existing StacValidate for comprehensive validation
-        validator = StacValidate(file_path, extensions=True)
+        # 2. Use existing StacValidate for comprehensive validation (default validator checks both core + extensions)
+        validator = StacValidate(file_path)
         validator.run()
 
         # Collect errors from validation
@@ -142,6 +142,7 @@ def validate_concurrently(
     # for memory-safe chunked processing
     if feature_collection:
         all_items = []
+        error_results = []
         for file_path in file_paths:
             try:
                 with open(file_path, "r") as f:
@@ -162,21 +163,24 @@ def validate_concurrently(
                     all_items.append(data)
 
             except Exception as e:
-                return [
+                # Accumulate error for this file and continue processing others
+                error_results.append(
                     {
                         "path": file_path,
                         "valid_stac": False,
                         "errors": [f"Failed to read file: {str(e)}"],
                     }
-                ]
+                )
 
         # Delegate to validate_dicts for chunked, memory-safe processing
-        return validate_dicts(
+        validation_results = validate_dicts(
             all_items,
             max_workers=max_workers,
             show_progress=show_progress,
-            feature_collection=False,  # Already expanded, no need to re-process
         )
+
+        # Combine error results with validation results
+        return error_results + validation_results
 
     # Standard file path validation (no FeatureCollection expansion)
     results: List[Dict[str, Any]] = []
@@ -248,7 +252,6 @@ def validate_dicts(
     items: Iterable[Dict[str, Any]],
     max_workers: Optional[int] = None,
     show_progress: bool = True,
-    feature_collection: bool = False,
     chunk_size: int = 1000,
 ) -> List[Dict[str, Any]]:
     """
@@ -265,7 +268,6 @@ def validate_dicts(
             - Positive int: Use that many cores (capped at available)
             - Negative int: Use all cores minus that many
         show_progress: Whether to show progress bar (default: True)
-        feature_collection: If True, treat items as features from a FeatureCollection
         chunk_size: Number of items to process at a time to bound disk and memory usage.
 
     Returns:
