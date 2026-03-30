@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stac_validator"
-version = "3.11.0"
+version = "4.0.0"
 description = "A package to validate STAC files"
 authors = [
     {name = "James Banting"},
@@ -26,6 +26,7 @@ dependencies = [
     "click>=8.1.8",
     "referencing>=0.35.1",
     "pyYAML>=6.0.1",
+    "tqdm>=4.66.0",
 ]
 optional-dependencies.dev = [
     "black",
@@ -38,7 +39,8 @@ optional-dependencies.dev = [
     "mypy",
     "types-attrs",
     "types-requests",
-    "types-jsonschema"
+    "types-jsonschema",
+    "types-tqdm"
 ]
 optional-dependencies.pydantic = [
     "stac-pydantic>=3.3.0"
@@ -56,7 +58,7 @@ content-type = "text/markdown"
 packages = ["stac_validator"]
 
 [project.scripts]
-stac-validator = "stac_validator.stac_validator:main"
+stac-validator = "stac_validator.stac_validator:cli"
 
 [tool.setuptools.package-data]
 stac_validator = ["*.yaml"]

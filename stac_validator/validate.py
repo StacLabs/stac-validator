@@ -486,6 +486,7 @@ class StacValidate:
         message = self.create_message(stac_type, "extensions")
         message["schema"] = []
         valid = True
+        extension = None
 
         try:
             if (
@@ -525,7 +526,11 @@ class StacValidate:
                 e = best_match(e.context)  # type: ignore
             valid = False
             # Get the current schema (extension) that caused the validation error
-            failed_schema = self._original_schema_paths.get(extension, extension)
+            failed_schema = (
+                self._original_schema_paths.get(extension, extension)
+                if extension
+                else "unknown schema"
+            )
             # Build the error message with path information
             path_info = (
                 f"Error is in {' -> '.join(map(str, e.absolute_path))} "
@@ -553,7 +558,7 @@ class StacValidate:
             # Include the current schema in the error message for other types of exceptions
             current_schema = (
                 self._original_schema_paths.get(extension, extension)
-                if "extension" in locals()
+                if extension
                 else "unknown schema"
             )
             err_msg = f"{e} [Schema: {current_schema}]. Error in Extensions."
