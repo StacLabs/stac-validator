@@ -531,13 +531,16 @@ class StacValidate:
                 if extension
                 else "unknown schema"
             )
+
             # Build the error message with path information
+            err_msg = e.message
             path_info = (
                 f"Error is in {' -> '.join(map(str, e.absolute_path))} "
                 if e.absolute_path
                 else ""
             )
-            err_msg = f"{e.message}. {path_info}"
+            if path_info:
+                err_msg = f"{err_msg}. {path_info}"
 
             # Create the error message with the original error object
             message = self.create_err_msg(
@@ -1013,13 +1016,33 @@ class StacValidate:
                 message = self.default_validator(stac_type)
 
         except jsonschema.exceptions.ValidationError as e:
+            # Improve error message for collection field validation
+            err_msg = e.message
+            if (
+                e.validator == "not"
+                and list(e.absolute_path) == ["collection"]
+                and "collection" in self.stac_content
+            ):
+                # Check if item has a collection link
+                has_collection_link = False
+                for link in self.stac_content.get("links", []):
+                    if link.get("rel") == "collection":
+                        has_collection_link = True
+                        break
+
+                if not has_collection_link:
+                    err_msg = (
+                        "Item has a 'collection' field but is missing a link with rel='collection'. "
+                        "According to STAC v1.0.0 spec, items with a collection field must have a "
+                        "corresponding link. Either remove the 'collection' field or add a link with "
+                        "rel='collection' pointing to the collection."
+                    )
+
             if e.absolute_path:
                 err_msg = (
-                    f"{e.message}. Error is in "
+                    f"{err_msg}. Error is in "
                     f"{' -> '.join([str(i) for i in e.absolute_path])} "
                 )
-            else:
-                err_msg = f"{e.message}"
             message.update(
                 self.create_err_msg(
                     err_type="JSONSchemaValidationError", err_msg=err_msg, error_obj=e

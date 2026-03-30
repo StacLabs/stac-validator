@@ -16,6 +16,16 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ### Updated
 
+## [v4.0.1] - 2026-03-31
+
+### Updated
+
+- Added special message about collection link missing from STAC items [#272](https://github.com/stac-utils/stac-validator/pull/272)
+
+### Fixed
+
+- Fixed concurrency issue with using set schema size from core validator [#272](https://github.com/stac-utils/stac-validator/pull/272)
+
 ## [v4.0.0] - 2026-03-30
 
 ### Added
@@ -372,7 +382,9 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - With the newest version - 1.0.0-beta.2 - items will run through jsonchema validation before the PySTAC validation. The reason for this is that jsonschema will give more informative error messages. This should be addressed better in the future. This is not the case with the --recursive option as time can be a concern here with larger collections.
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
-[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v3.11.0..main
+[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.0.1..main
+[v4.0.1]: https://github.com/sparkgeo/stac-validator/compare/v4.0.0..v4.0.1
+[v4.0.0]: https://github.com/sparkgeo/stac-validator/compare/v3.11.0..v4.0.0
 [v3.11.0]: https://github.com/sparkgeo/stac-validator/compare/v3.10.2..v3.11.0
 [v3.10.2]: https://github.com/sparkgeo/stac-validator/compare/v3.10.1..v3.10.2
 [v3.10.1]: https://github.com/sparkgeo/stac-validator/compare/v3.10.0..v3.10.1
