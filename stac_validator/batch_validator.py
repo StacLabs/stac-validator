@@ -214,7 +214,7 @@ def validate_concurrently(
             # Wrap the as_completed iterator with tqdm for a nice progress bar
             iterator = concurrent.futures.as_completed(future_to_file)
             if show_progress and has_tqdm:
-                iterator = tqdm(
+                iterator = tqdm(  # type: ignore
                     iterator,
                     total=len(tasks_to_run),
                     desc="Validating STAC Items",
