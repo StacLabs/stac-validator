@@ -5,7 +5,8 @@ import json
 import multiprocessing
 import os
 import tempfile
-from typing import Any, Dict, List, Optional, Tuple
+from itertools import islice
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from .utilities import fetch_and_parse_file, validate_stac_version_field
 from .validate import StacValidate
@@ -137,11 +138,48 @@ def validate_concurrently(
     Returns:
         List of result dictionaries with keys: path, valid_stac, errors
     """
-    results = []
-    temp_files_to_cleanup = []
-    path_mapping = (
-        {}
-    )  # Maps actual file paths (including temp files) to their display paths
+    # If feature_collection mode, extract features and delegate to validate_dicts
+    # for memory-safe chunked processing
+    if feature_collection:
+        all_items = []
+        for file_path in file_paths:
+            try:
+                with open(file_path, "r") as f:
+                    data = json.load(f)
+
+                # Check if it's a FeatureCollection
+                if isinstance(data, dict) and data.get("type") == "FeatureCollection":
+                    features = data.get("features", [])
+                    for idx, feature in enumerate(features):
+                        # Attach source info for result display
+                        feature["__source_file__"] = file_path
+                        feature["__feature_index__"] = idx
+                        all_items.append(feature)
+                else:
+                    # Regular file, treat as single item
+                    data["__source_file__"] = file_path
+                    data["__feature_index__"] = None
+                    all_items.append(data)
+
+            except Exception as e:
+                return [
+                    {
+                        "path": file_path,
+                        "valid_stac": False,
+                        "errors": [f"Failed to read file: {str(e)}"],
+                    }
+                ]
+
+        # Delegate to validate_dicts for chunked, memory-safe processing
+        return validate_dicts(
+            all_items,
+            max_workers=max_workers,
+            show_progress=show_progress,
+            feature_collection=False,  # Already expanded, no need to re-process
+        )
+
+    # Standard file path validation (no FeatureCollection expansion)
+    results: List[Dict[str, Any]] = []
 
     try:
         from tqdm import tqdm
@@ -153,54 +191,10 @@ def validate_concurrently(
 
     optimal_workers = get_optimal_worker_count(max_workers)
 
+    if not file_paths:
+        return results
+
     try:
-        # Step 1: Prepare the tasks
-        if feature_collection:
-            for file_path in file_paths:
-                try:
-                    with open(file_path, "r") as f:
-                        data = json.load(f)
-
-                    # Check if it's a FeatureCollection
-                    if (
-                        isinstance(data, dict)
-                        and data.get("type") == "FeatureCollection"
-                    ):
-                        features = data.get("features", [])
-
-                        # Create temporary files for each feature so workers can process them
-                        for idx, feature in enumerate(features):
-                            with tempfile.NamedTemporaryFile(
-                                mode="w", suffix=".json", delete=False
-                            ) as tmp:
-                                json.dump(feature, tmp)
-                                tmp_path = tmp.name
-
-                            temp_files_to_cleanup.append(tmp_path)
-                            display_path = f"{file_path}[{idx}]"
-                            path_mapping[tmp_path] = display_path
-                    else:
-                        # Regular file, process as-is
-                        path_mapping[file_path] = file_path
-
-                except Exception as e:
-                    results.append(
-                        {
-                            "path": file_path,
-                            "valid_stac": False,
-                            "errors": [f"Failed to read file: {str(e)}"],
-                        }
-                    )
-                    continue
-        else:
-            for file_path in file_paths:
-                path_mapping[file_path] = file_path
-
-        tasks_to_run = list(path_mapping.keys())
-        if not tasks_to_run:
-            return results
-
-        # Step 2: ProcessPoolExecutor bypasses the GIL by creating separate Python processes
         with concurrent.futures.ProcessPoolExecutor(
             max_workers=optimal_workers
         ) as executor:
@@ -208,7 +202,7 @@ def validate_concurrently(
             # Submit all tasks to the pool
             future_to_file = {
                 executor.submit(_validate_single_file, path): path
-                for path in tasks_to_run
+                for path in file_paths
             }
 
             # Wrap the as_completed iterator with tqdm for a nice progress bar
@@ -216,19 +210,16 @@ def validate_concurrently(
             if show_progress and has_tqdm:
                 iterator = tqdm(  # type: ignore
                     iterator,
-                    total=len(tasks_to_run),
+                    total=len(file_paths),
                     desc="Validating STAC Items",
                 )
 
-            # Step 3: Collect results as they finish
+            # Collect results as they finish
             for future in iterator:
-                actual_path, is_valid, errors = future.result()
-
-                # Map the temp file path back to the user-friendly display path
-                display_path = path_mapping[actual_path]
+                file_path, is_valid, errors = future.result()
 
                 result = {
-                    "path": display_path,
+                    "path": file_path,
                     "valid_stac": is_valid,
                 }
 
@@ -238,65 +229,101 @@ def validate_concurrently(
                 results.append(result)
 
     finally:
-        # Step 4: Clean up any temporary files we created for FeatureCollections
-        for tmp_path in temp_files_to_cleanup:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+        pass
 
     return results
 
 
+def _chunked_iterable(iterable: Iterable, size: int):
+    """Yield successive n-sized chunks from an iterable."""
+    it = iter(iterable)
+    while True:
+        chunk = list(islice(it, size))
+        if not chunk:
+            break
+        yield chunk
+
+
 def validate_dicts(
-    items: List[Dict[str, Any]],
+    items: Iterable[Dict[str, Any]],
     max_workers: Optional[int] = None,
     show_progress: bool = True,
     feature_collection: bool = False,
+    chunk_size: int = 1000,
 ) -> List[Dict[str, Any]]:
     """
-    Validate a list of STAC item dictionaries concurrently.
+    Validate an iterable of STAC item dictionaries concurrently.
 
-    Internally writes dictionaries to temporary files for concurrent validation,
-    eliminating the need for users to manage temp files.
+    Internally writes dictionaries to temporary files in bounded chunks for
+    concurrent validation, preventing both out-of-memory (OOM) errors and
+    disk/inode exhaustion in containerized environments.
 
     Args:
-        items: List of STAC item dictionaries to validate
+        items: Iterable of STAC item dictionaries to validate
         max_workers: Maximum number of worker processes. Options:
             - None or 0: Use all available cores (default)
             - Positive int: Use that many cores (capped at available)
             - Negative int: Use all cores minus that many
         show_progress: Whether to show progress bar (default: True)
         feature_collection: If True, treat items as features from a FeatureCollection
+        chunk_size: Number of items to process at a time to bound disk and memory usage.
 
     Returns:
         List of validation results with path, valid_stac, and errors (if any)
     """
-    temp_files = []
+    all_results = []
 
-    try:
-        # Write items to temporary files
-        for i, item in enumerate(items):
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".json", delete=False
-            ) as f:
-                json.dump(item, f)
-                temp_files.append(f.name)
+    # Process items in bounded chunks to protect memory and /tmp disk space
+    for chunk in _chunked_iterable(items, chunk_size):
+        temp_files = []
+        temp_file_to_source = (
+            {}
+        )  # Map temp file paths to source info for result display
+        try:
+            # Write this specific chunk to temporary files
+            for item in chunk:
+                # Extract source metadata if present (from validate_concurrently)
+                source_file = item.pop("__source_file__", None)
+                feature_index = item.pop("__feature_index__", None)
 
-        # Validate using concurrent validation
-        results = validate_concurrently(
-            temp_files,
-            max_workers=max_workers,
-            show_progress=show_progress,
-            feature_collection=feature_collection,
-        )
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".json", delete=False
+                ) as f:
+                    json.dump(item, f)
+                    tmp_path = f.name
+                    temp_files.append(tmp_path)
 
-        return results
+                    # Store source info for result mapping
+                    if source_file is not None:
+                        display_path = (
+                            f"{source_file}[{feature_index}]"
+                            if feature_index is not None
+                            else source_file
+                        )
+                        temp_file_to_source[tmp_path] = display_path
 
-    finally:
-        # Clean up temporary files
-        for temp_file in temp_files:
-            try:
-                os.unlink(temp_file)
-            except Exception:
-                pass
+            # Validate the chunk concurrently
+            chunk_results = validate_concurrently(
+                temp_files,
+                max_workers=max_workers,
+                show_progress=show_progress,
+                feature_collection=False,  # Already expanded, no need to re-process
+            )
+
+            # Map results back to original source paths if available
+            for result in chunk_results:
+                result_path = result["path"]
+                if result_path in temp_file_to_source:
+                    result["path"] = temp_file_to_source[result_path]
+
+            all_results.extend(chunk_results)
+
+        finally:
+            # Strictly clean up temporary files before moving to the next chunk
+            for temp_file in temp_files:
+                try:
+                    os.unlink(temp_file)
+                except OSError:
+                    pass
+
+    return all_results
