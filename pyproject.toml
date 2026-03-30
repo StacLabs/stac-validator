@@ -26,6 +26,7 @@ dependencies = [
     "click>=8.1.8",
     "referencing>=0.35.1",
     "pyYAML>=6.0.1",
+    "tqdm>=4.66.0",
 ]
 optional-dependencies.dev = [
     "black",

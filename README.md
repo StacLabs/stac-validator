@@ -487,25 +487,19 @@ for result in results:
 - `items` - List of STAC item dictionaries
 - `max_workers` - CPU cores to use (None = auto-detect, positive int = specific cores, negative int = all minus N)
 - `show_progress` - Display progress bar (default: True)
-- `feature_collection` - Treat items as features from a FeatureCollection (default: False)
+- `chunk_size` - Number of items to process at a time to bound disk and memory usage (default: 1000)
 
 **Batch Validation - FeatureCollection (Concurrent with Multiprocessing)**
 
-For FeatureCollection validation with multiprocessing, use `validate_dicts` with `feature_collection=True`:
+For FeatureCollection validation with multiprocessing, use `validate_concurrently()` with `feature_collection=True`:
 
 ```python
-from stac_validator.batch_validator import validate_dicts
-import json
+from stac_validator.batch_validator import validate_concurrently
 
-# Load FeatureCollection from file
-with open("collection.json") as f:
-    feature_collection = json.load(f)
-
-# Extract features and validate concurrently (10-100x faster for large collections)
-features = feature_collection.get("features", [])
-results = validate_dicts(
-    features,
-    feature_collection=True,
+# Validate FeatureCollection files directly (10-100x faster for large collections)
+results = validate_concurrently(
+    ["collection1.json", "collection2.json"],
+    feature_collection=True,  # Expand and validate each feature
     max_workers=None  # Auto-detect cores
 )
 

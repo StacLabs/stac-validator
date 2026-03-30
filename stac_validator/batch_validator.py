@@ -8,7 +8,6 @@ import tempfile
 from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from .utilities import fetch_and_parse_file, validate_stac_version_field
 from .validate import StacValidate
 
 
@@ -72,15 +71,7 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
     errors = []
 
     try:
-        # Load the file
-        stac_content = fetch_and_parse_file(file_path)
-
-        # 1. Validate version
-        is_valid_version, err_type, err_msg = validate_stac_version_field(stac_content)
-        if not is_valid_version:
-            return file_path, False, [f"{err_type}: {err_msg}"]
-
-        # 2. Use existing StacValidate for comprehensive validation (default validator checks both core + extensions)
+        # Use StacValidate for comprehensive validation (includes version check, core, and extensions)
         validator = StacValidate(file_path)
         validator.run()
 
@@ -141,40 +132,50 @@ def validate_concurrently(
     # If feature_collection mode, extract features and delegate to validate_dicts
     # for memory-safe chunked processing
     if feature_collection:
-        all_items = []
-        error_results = []
-        for file_path in file_paths:
-            try:
-                with open(file_path, "r") as f:
-                    data = json.load(f)
+        error_results: List[Dict[str, Any]] = []
 
-                # Check if it's a FeatureCollection
-                if isinstance(data, dict) and data.get("type") == "FeatureCollection":
-                    features = data.get("features", [])
-                    for idx, feature in enumerate(features):
-                        # Attach source info for result display
-                        feature["__source_file__"] = file_path
-                        feature["__feature_index__"] = idx
-                        all_items.append(feature)
-                else:
-                    # Regular file, treat as single item
-                    data["__source_file__"] = file_path
-                    data["__feature_index__"] = None
-                    all_items.append(data)
+        def item_iter() -> Iterable[Dict[str, Any]]:
+            """
+            Lazily iterate over all items (features or standalone objects)
+            from the provided file_paths, annotating each with source
+            metadata. Any file-level read/parse errors are recorded in
+            error_results and skipped.
+            """
+            for file_path in file_paths:
+                try:
+                    with open(file_path, "r") as f:
+                        data = json.load(f)
 
-            except Exception as e:
-                # Accumulate error for this file and continue processing others
-                error_results.append(
-                    {
-                        "path": file_path,
-                        "valid_stac": False,
-                        "errors": [f"Failed to read file: {str(e)}"],
-                    }
-                )
+                    # Check if it's a FeatureCollection
+                    if (
+                        isinstance(data, dict)
+                        and data.get("type") == "FeatureCollection"
+                    ):
+                        features = data.get("features", [])
+                        for idx, feature in enumerate(features):
+                            # Attach source info for result display
+                            feature["__source_file__"] = file_path
+                            feature["__feature_index__"] = idx
+                            yield feature
+                    else:
+                        # Regular file, treat as single item
+                        data["__source_file__"] = file_path
+                        data["__feature_index__"] = None
+                        yield data
+
+                except Exception as e:
+                    # Accumulate error for this file and continue processing others
+                    error_results.append(
+                        {
+                            "path": file_path,
+                            "valid_stac": False,
+                            "errors": [f"Failed to read file: {str(e)}"],
+                        }
+                    )
 
         # Delegate to validate_dicts for chunked, memory-safe processing
         validation_results = validate_dicts(
-            all_items,
+            item_iter(),
             max_workers=max_workers,
             show_progress=show_progress,
         )
@@ -285,13 +286,21 @@ def validate_dicts(
             # Write this specific chunk to temporary files
             for item in chunk:
                 # Extract source metadata if present (from validate_concurrently)
-                source_file = item.pop("__source_file__", None)
-                feature_index = item.pop("__feature_index__", None)
+                # Use .get() to avoid mutating the input dictionary
+                source_file = item.get("__source_file__")
+                feature_index = item.get("__feature_index__")
+
+                # Create a payload without internal metadata keys to avoid mutating input
+                payload = {
+                    k: v
+                    for k, v in item.items()
+                    if k not in ("__source_file__", "__feature_index__")
+                }
 
                 with tempfile.NamedTemporaryFile(
                     mode="w", suffix=".json", delete=False
                 ) as f:
-                    json.dump(item, f)
+                    json.dump(payload, f)
                     tmp_path = f.name
                     temp_files.append(tmp_path)
 
