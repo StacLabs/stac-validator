@@ -367,6 +367,12 @@ def main(
     is_flag=True,
     help="Show full JSON output for all items. By default, only invalid items are shown.",
 )
+@click.option(
+    "--schema-cache-size",
+    type=int,
+    default=16,
+    help="Max number of schema entries to cache per worker process. Use 0 to disable schema caching. Defaults to 16.",
+)
 def batch(
     files: Tuple[str, ...],
     cores: Optional[int],
@@ -374,6 +380,7 @@ def batch(
     no_output: bool,
     feature_collection: bool,
     verbose: bool,
+    schema_cache_size: int,
 ):
     """Validate multiple STAC files concurrently using all available CPU cores.
 
@@ -414,6 +421,7 @@ def batch(
             max_workers=cores,
             show_progress=not no_progress,
             feature_collection=feature_collection,
+            schema_cache_size=schema_cache_size,
         )
 
         # Calculate statistics

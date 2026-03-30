@@ -13,22 +13,30 @@ from .utilities import fetch_and_parse_schema
 from .validate import StacValidate
 
 
-@lru_cache(maxsize=128)
-def _get_cached_schema(schema_path: str) -> Dict[str, Any]:
+def _make_cached_schema_loader(cache_size: int):
     """
-    Load and cache a JSON schema.
-
-    Schemas are cached per worker process using functools.lru_cache.
-    This ensures schemas are only fetched once per worker, dramatically
-    improving performance for large batches of similar STAC objects.
+    Factory function to create a cached schema loader with a specific cache size.
 
     Args:
-        schema_path: Path or URL to the JSON schema.
+        cache_size: Maximum number of schemas to cache. Use 0 to disable caching.
 
     Returns:
-        Parsed JSON schema dictionary.
+        A function that loads and caches schemas.
     """
-    return fetch_and_parse_schema(schema_path)
+    if cache_size == 0:
+        # No caching
+        return fetch_and_parse_schema
+
+    # Create a cached version with the specified size
+    @lru_cache(maxsize=cache_size)
+    def cached_loader(schema_path: str) -> Dict[str, Any]:
+        return fetch_and_parse_schema(schema_path)
+
+    return cached_loader
+
+
+# Default cached schema loader with 16 schemas
+_get_cached_schema = _make_cached_schema_loader(16)
 
 
 def get_optimal_worker_count(max_workers: Optional[int] = None) -> int:
@@ -141,6 +149,7 @@ def validate_concurrently(
     max_workers: Optional[int] = None,
     show_progress: bool = True,
     feature_collection: bool = False,
+    schema_cache_size: int = 16,
 ) -> List[Dict[str, Any]]:
     """
     Validates a list of STAC files concurrently using available CPU cores.
@@ -157,10 +166,14 @@ def validate_concurrently(
             - Negative int: Use all cores minus that many (e.g., -1 = all cores - 1)
         show_progress: Whether to display a progress bar (requires tqdm).
         feature_collection: If True, treat files as FeatureCollections and validate each feature.
+        schema_cache_size: Maximum number of schemas to cache per worker. Use 0 to disable caching.
 
     Returns:
         List of result dictionaries with keys: path, valid_stac, errors
     """
+    # Create a cached schema loader with the specified cache size
+    global _get_cached_schema
+    _get_cached_schema = _make_cached_schema_loader(schema_cache_size)
     # If feature_collection mode, extract features and delegate to validate_dicts
     # for memory-safe chunked processing
     if feature_collection:

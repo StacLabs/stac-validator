@@ -22,9 +22,10 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 - **Batch Validation with Multiprocessing:** New `stac-validator batch` command for concurrent validation of multiple STAC files using all available CPU cores. Provides 10-100x performance improvement over single-threaded validation.
   - Auto-detection of available CPU cores with Docker/container awareness via `os.sched_getaffinity()`
-  - Per-core schema caching with LRU eviction for optimal memory usage
+  - Per-worker schema caching with LRU eviction for optimal memory usage (configurable via `--schema-cache-size`, default 16 schemas per worker)
   - Optional `--cores` flag for manual core specification (supports negative values to reserve cores for OS)
   - Optional `--feature-collection` flag to validate GeoJSON FeatureCollections by extracting and validating each feature individually
+  - Optional `--schema-cache-size` flag to configure schema cache size per worker or disable caching entirely
   - Progress bar with `tqdm` (can be disabled with `--no-progress`)
   - JSON output with validation summary statistics
 
