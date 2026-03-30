@@ -101,6 +101,8 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
                     errors.append(str(validator.message))
 
     except Exception as e:
+        # Catch any exception including StacValidate instantiation failures
+        # This prevents UnboundLocalError if validator creation fails
         return file_path, False, [f"Critical error processing file: {str(e)}"]
 
     is_valid = len(errors) == 0

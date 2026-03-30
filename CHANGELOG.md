@@ -20,11 +20,11 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ### Updated
 
-- Added special message about collection link missing from STAC items
+- Added special message about collection link missing from STAC items [#272](https://github.com/stac-utils/stac-validator/pull/272)
 
 ### Fixed
 
-- Fixed concurrency issue with using set schema size from core validator
+- Fixed concurrency issue with using set schema size from core validator [#272](https://github.com/stac-utils/stac-validator/pull/272)
 
 ## [v4.0.0] - 2026-03-30
 
