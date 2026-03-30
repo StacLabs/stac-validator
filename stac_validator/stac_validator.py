@@ -238,7 +238,7 @@ def recursive_validation_summary(message: List[Dict[str, Any]]) -> None:
     "--schema-cache-size",
     type=int,
     default=None,
-    help="Max number of schema entries to cache in memory. Use 0 to disable schema caching. Defaults to 16.",
+    help="Max number of schema entries to cache in memory. Defaults to 16.",
 )
 def main(
     stac_file: str,
@@ -371,7 +371,7 @@ def main(
     "--schema-cache-size",
     type=int,
     default=16,
-    help="Max number of schema entries to cache per worker process. Use 0 to disable schema caching. Defaults to 16.",
+    help="Max number of schema entries to cache per worker process. Defaults to 16.",
 )
 def batch(
     files: Tuple[str, ...],
@@ -410,6 +410,11 @@ def batch(
     start_time = time.time()
 
     try:
+        # Configure schema cache size BEFORE spawning workers
+        # This ensures all worker processes inherit the configured cache size
+        if schema_cache_size != 16:
+            set_schema_cache_size(schema_cache_size)
+
         # Get optimal worker count
         from .batch_validator import get_optimal_worker_count
 
@@ -421,46 +426,33 @@ def batch(
             max_workers=cores,
             show_progress=not no_progress,
             feature_collection=feature_collection,
-            schema_cache_size=schema_cache_size,
         )
 
         # Calculate statistics
         valid_count = sum(1 for r in results if r.get("valid_stac", False))
         invalid_count = len(results) - valid_count
 
-        # Print results based on verbosity
-        if not no_output:
-            if verbose:
-                # Show full JSON output in verbose mode
-                click.echo(json.dumps(results, indent=4))
-            elif invalid_count > 0:
-                # Show only invalid items by default
-                invalid_results = [r for r in results if not r.get("valid_stac", False)]
-                click.echo(json.dumps(invalid_results, indent=4))
+        # Print details of failed validations first (only in non-verbose mode)
+        if not no_output and invalid_count > 0 and not verbose:
+            click.secho("Failed validations:", fg="red")
+            for result in results:
+                if not result.get("valid_stac", False):
+                    click.secho(f"  {result['path']}", fg="red")
+                    if "errors" in result:
+                        for error in result["errors"]:
+                            click.secho(f"    - {error}", fg="yellow")
 
-        # Print summary
+        # Print full JSON output in verbose mode
+        if not no_output and verbose:
+            click.echo(json.dumps(results, indent=4))
+
+        # Print summary at the bottom
         click.secho()
         click.secho("Validation Summary:", bold=True)
         click.secho(f"  Total files: {len(results)}")
         click.secho(f"  CPU cores used: {optimal_workers}")
         click.secho(f"  ✅ Valid: {valid_count}")
         click.secho(f"  ❌ Invalid: {invalid_count}")
-
-        # Print details of failed validations
-        if invalid_count > 0:
-            click.secho()
-            click.secho("Failed validations:", fg="red")
-            for result in results:
-                if not result.get("valid_stac", False):
-                    click.secho(f"  {result['path']}", fg="red")
-                    if "errors" in result:
-                        for error in result["errors"][:3]:  # Show first 3 errors
-                            click.secho(f"    - {error}", fg="yellow")
-                        if len(result["errors"]) > 3:
-                            click.secho(
-                                f"    ... and {len(result['errors']) - 3} more errors",
-                                fg="yellow",
-                            )
 
         duration = time.time() - start_time
         click.secho()

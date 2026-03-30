@@ -350,37 +350,29 @@ def test_validate_concurrently_with_read_errors():
 
 @patch("stac_validator.utilities.requests.get")
 def test_worker_schema_caching(mock_get, test_items_dir):
-    """Test that native schema caching prevents redundant network calls.
+    """Test that schema caching prevents redundant network calls in worker processes.
 
-    Verifies that when multiple STAC items are validated in a worker process,
-    shared schemas are only fetched once from the network, with subsequent
-    validations using the cached schema.
+    Verifies that when the same STAC item is validated twice in a worker process,
+    the schema is only fetched once from the network, with subsequent validations
+    using the cached schema.
     """
-    from stac_validator.utilities import set_schema_cache_size
-
-    # Use two different items that likely share some schemas
-    item_path1 = str(test_items_dir / "extended-item.json")
-    item_path2 = str(test_items_dir / "extended-item.json")  # Same item
-
-    # Configure cache with a reasonable size before validations
-    set_schema_cache_size(16)
+    item_path = str(test_items_dir / "extended-item.json")
 
     # 1. First validation: Should trigger network requests for schemas
-    _validate_single_file(item_path1, schema_cache_size=16)
+    _validate_single_file(item_path)
 
     calls_after_first = mock_get.call_count
     assert calls_after_first > 0, "Expected network calls on the first validation"
 
     # 2. Second validation: Same item, so schemas should be cached
-    # Note: set_schema_cache_size is called again in _validate_single_file,
-    # which resets the cache. This test verifies the cache works within
-    # a single worker process lifecycle.
-    _validate_single_file(item_path2, schema_cache_size=16)
+    # Each worker process has its own isolated schema cache
+    _validate_single_file(item_path)
 
     calls_after_second = mock_get.call_count
 
-    # 3. Assertion: Verify that schema caching is enabled
-    # The cache size parameter should be respected by the worker
-    assert (
-        calls_after_second >= calls_after_first
-    ), "Network call count should not decrease"
+    # 3. Assertion: The call count should NOT have increased
+    # If caching works, the second validation should not trigger new network calls
+    assert calls_after_second == calls_after_first, (
+        f"Schemas were fetched again instead of using cache! "
+        f"First run: {calls_after_first} calls, Second run: {calls_after_second} calls"
+    )
