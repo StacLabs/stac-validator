@@ -5,7 +5,7 @@ import json
 import multiprocessing
 import os
 import tempfile
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from .utilities import fetch_and_parse_file, validate_stac_version_field
 from .validate import StacValidate
@@ -138,6 +138,10 @@ def validate_concurrently(
         List of result dictionaries with keys: path, valid_stac, errors
     """
     results = []
+    temp_files_to_cleanup = []
+    path_mapping = (
+        {}
+    )  # Maps actual file paths (including temp files) to their display paths
 
     try:
         from tqdm import tqdm
@@ -147,175 +151,99 @@ def validate_concurrently(
         has_tqdm = False
         show_progress = False
 
-    # Get optimal worker count
     optimal_workers = get_optimal_worker_count(max_workers)
 
-    # If feature_collection mode, expand FeatureCollections into individual items
-    if feature_collection:
-        expanded_files = []
-        for file_path in file_paths:
-            try:
-                with open(file_path, "r") as f:
-                    data = json.load(f)
+    try:
+        # Step 1: Prepare the tasks
+        if feature_collection:
+            for file_path in file_paths:
+                try:
+                    with open(file_path, "r") as f:
+                        data = json.load(f)
 
-                # Check if it's a FeatureCollection
-                if isinstance(data, dict) and data.get("type") == "FeatureCollection":
-                    features = data.get("features", [])
-                    # Create temporary files for each feature
-                    for idx, feature in enumerate(features):
-                        # Store feature with reference to original file
-                        expanded_files.append(
-                            {
-                                "feature": feature,
-                                "source_file": file_path,
-                                "feature_index": idx,
-                            }
-                        )
-                else:
-                    # Regular file, process as-is
-                    expanded_files.append(
-                        {
-                            "feature": data,
-                            "source_file": file_path,
-                            "feature_index": None,
-                        }
-                    )
-            except Exception as e:
-                results.append(
-                    {
-                        "path": file_path,
-                        "valid_stac": False,
-                        "errors": [f"Failed to read file: {str(e)}"],
-                    }
-                )
-                continue
+                    # Check if it's a FeatureCollection
+                    if (
+                        isinstance(data, dict)
+                        and data.get("type") == "FeatureCollection"
+                    ):
+                        features = data.get("features", [])
 
-        # Validate features directly
-        for item in expanded_files:
-            try:
-                feature = item["feature"]
-                source_file = item["source_file"]
-                feature_index = item["feature_index"]
+                        # Create temporary files for each feature so workers can process them
+                        for idx, feature in enumerate(features):
+                            with tempfile.NamedTemporaryFile(
+                                mode="w", suffix=".json", delete=False
+                            ) as tmp:
+                                json.dump(feature, tmp)
+                                tmp_path = tmp.name
 
-                # Validate the feature/item
-                is_valid_version, err_type, err_msg = validate_stac_version_field(
-                    feature
-                )
-                if not is_valid_version:
-                    result_path = (
-                        f"{source_file}[{feature_index}]"
-                        if feature_index is not None
-                        else source_file
-                    )
+                            temp_files_to_cleanup.append(tmp_path)
+                            display_path = f"{file_path}[{idx}]"
+                            path_mapping[tmp_path] = display_path
+                    else:
+                        # Regular file, process as-is
+                        path_mapping[file_path] = file_path
+
+                except Exception as e:
                     results.append(
                         {
-                            "path": result_path,
+                            "path": file_path,
                             "valid_stac": False,
-                            "errors": [f"{err_type}: {err_msg}"],
+                            "errors": [f"Failed to read file: {str(e)}"],
                         }
                     )
                     continue
-
-                # Write feature to temporary file for validation
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".json", delete=False
-                ) as tmp:
-                    json.dump(feature, tmp)
-                    tmp_path = tmp.name
-
-                try:
-                    # Use StacValidate for comprehensive validation
-                    validator = StacValidate(tmp_path, extensions=True)
-                    validator.run()
-
-                    # Parse results
-                    errors = []
-                    if validator.message:
-                        try:
-                            messages = validator.message
-                            if isinstance(messages, list) and len(messages) > 0:
-                                msg_obj = messages[0]
-                                if not msg_obj.get("valid_stac", False):
-                                    # Try multiple error field names
-                                    if "errors" in msg_obj:
-                                        errors.extend(msg_obj["errors"])
-                                    elif "error_message" in msg_obj:
-                                        errors.append(msg_obj["error_message"])
-                                    else:
-                                        errors.append(
-                                            f"{msg_obj.get('error_type', 'ValidationError')}"
-                                        )
-                        except (KeyError, IndexError, TypeError):
-                            if validator.message:
-                                errors.append(str(validator.message))
-                finally:
-                    os.unlink(tmp_path)
-
-                result_path = (
-                    f"{source_file}[{feature_index}]"
-                    if feature_index is not None
-                    else source_file
-                )
-                results.append(
-                    {
-                        "path": result_path,
-                        "valid_stac": len(errors) == 0,
-                        "errors": errors if errors else None,
-                    }
-                )
-
-            except Exception as e:
-                result_path = (
-                    f"{source_file}[{feature_index}]"
-                    if feature_index is not None
-                    else source_file
-                )
-                results.append(
-                    {
-                        "path": result_path,
-                        "valid_stac": False,
-                        "errors": [f"Critical error: {str(e)}"],
-                    }
-                )
-
-        return results
-
-    # ProcessPoolExecutor bypasses the GIL by creating entirely separate Python processes
-    with concurrent.futures.ProcessPoolExecutor(
-        max_workers=optimal_workers
-    ) as executor:
-
-        # Submit all tasks to the pool
-        future_to_file = {
-            executor.submit(_validate_single_file, path): path for path in file_paths
-        }
-
-        # Wrap the as_completed iterator with tqdm for a nice progress bar
-        iterator: Union[
-            Iterable[concurrent.futures.Future[Tuple[str, bool, List[str]]]],
-            Any,
-        ]
-        if show_progress and has_tqdm:
-            iterator = tqdm(
-                concurrent.futures.as_completed(future_to_file),
-                total=len(file_paths),
-                desc="Validating STAC Items",
-            )
         else:
-            iterator = concurrent.futures.as_completed(future_to_file)
+            for file_path in file_paths:
+                path_mapping[file_path] = file_path
 
-        for future in iterator:
-            file_path, is_valid, errors = future.result()
+        tasks_to_run = list(path_mapping.keys())
+        if not tasks_to_run:
+            return results
 
-            result = {
-                "path": file_path,
-                "valid_stac": is_valid,
+        # Step 2: ProcessPoolExecutor bypasses the GIL by creating separate Python processes
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=optimal_workers
+        ) as executor:
+
+            # Submit all tasks to the pool
+            future_to_file = {
+                executor.submit(_validate_single_file, path): path
+                for path in tasks_to_run
             }
 
-            if errors:
-                result["errors"] = errors
+            # Wrap the as_completed iterator with tqdm for a nice progress bar
+            iterator = concurrent.futures.as_completed(future_to_file)
+            if show_progress and has_tqdm:
+                iterator = tqdm(
+                    iterator,
+                    total=len(tasks_to_run),
+                    desc="Validating STAC Items",
+                )
 
-            results.append(result)
+            # Step 3: Collect results as they finish
+            for future in iterator:
+                actual_path, is_valid, errors = future.result()
+
+                # Map the temp file path back to the user-friendly display path
+                display_path = path_mapping[actual_path]
+
+                result = {
+                    "path": display_path,
+                    "valid_stac": is_valid,
+                }
+
+                if errors:
+                    result["errors"] = errors
+
+                results.append(result)
+
+    finally:
+        # Step 4: Clean up any temporary files we created for FeatureCollections
+        for tmp_path in temp_files_to_cleanup:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
     return results
 
