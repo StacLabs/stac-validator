@@ -5,38 +5,11 @@ import json
 import multiprocessing
 import os
 import tempfile
-from functools import lru_cache
 from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from .utilities import fetch_and_parse_schema
+from .utilities import set_schema_cache_size
 from .validate import StacValidate
-
-
-def _make_cached_schema_loader(cache_size: int):
-    """
-    Factory function to create a cached schema loader with a specific cache size.
-
-    Args:
-        cache_size: Maximum number of schemas to cache. Use 0 to disable caching.
-
-    Returns:
-        A function that loads and caches schemas.
-    """
-    if cache_size == 0:
-        # No caching
-        return fetch_and_parse_schema
-
-    # Create a cached version with the specified size
-    @lru_cache(maxsize=cache_size)
-    def cached_loader(schema_path: str) -> Dict[str, Any]:
-        return fetch_and_parse_schema(schema_path)
-
-    return cached_loader
-
-
-# Default cached schema loader with 16 schemas
-_get_cached_schema = _make_cached_schema_loader(16)
 
 
 def get_optimal_worker_count(max_workers: Optional[int] = None) -> int:
@@ -85,15 +58,18 @@ def get_optimal_worker_count(max_workers: Optional[int] = None) -> int:
         return min(max_workers, total_cores)
 
 
-def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
+def _validate_single_file(
+    file_path: str, schema_cache_size: int = 16
+) -> Tuple[str, bool, List[str]]:
     """
     Worker function that runs on an individual CPU core.
     Validates a single STAC file and returns results.
 
-    Uses cached schema loading to avoid redundant fetches within each worker process.
+    Configures schema caching for this worker process to avoid redundant fetches.
 
     Args:
         file_path: Path to the STAC JSON file to validate.
+        schema_cache_size: Maximum number of schemas to cache in this worker.
 
     Returns:
         Tuple of (file_path, is_valid, list_of_errors)
@@ -101,19 +77,12 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
     errors = []
 
     try:
-        # Monkey-patch fetch_and_parse_schema to use cached version within this worker
-        import stac_validator.utilities as utilities
+        # Configure schema cache size for this worker process
+        set_schema_cache_size(schema_cache_size)
 
-        original_fetch = utilities.fetch_and_parse_schema
-        utilities.fetch_and_parse_schema = _get_cached_schema
-
-        try:
-            # Use StacValidate for comprehensive validation (includes version check, core, and extensions)
-            validator = StacValidate(file_path)
-            validator.run()
-        finally:
-            # Restore original function
-            utilities.fetch_and_parse_schema = original_fetch
+        # Use StacValidate for comprehensive validation (includes version check, core, and extensions)
+        validator = StacValidate(file_path)
+        validator.run()
 
         # Collect errors from validation
         # validator.message is a list of result objects
@@ -171,9 +140,6 @@ def validate_concurrently(
     Returns:
         List of result dictionaries with keys: path, valid_stac, errors
     """
-    # Create a cached schema loader with the specified cache size
-    global _get_cached_schema
-    _get_cached_schema = _make_cached_schema_loader(schema_cache_size)
     # If feature_collection mode, extract features and delegate to validate_dicts
     # for memory-safe chunked processing
     if feature_collection:
@@ -251,7 +217,7 @@ def validate_concurrently(
 
             # Submit all tasks to the pool
             future_to_file = {
-                executor.submit(_validate_single_file, path): path
+                executor.submit(_validate_single_file, path, schema_cache_size): path
                 for path in file_paths
             }
 
