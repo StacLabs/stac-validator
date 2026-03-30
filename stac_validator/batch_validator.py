@@ -8,6 +8,7 @@ import tempfile
 from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from .utilities import set_schema_cache_size
 from .validate import StacValidate
 
 
@@ -57,13 +58,18 @@ def get_optimal_worker_count(max_workers: Optional[int] = None) -> int:
         return min(max_workers, total_cores)
 
 
-def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
+def _validate_single_file(
+    file_path: str, schema_cache_size: int = 16
+) -> Tuple[str, bool, List[str]]:
     """
     Worker function that runs on an individual CPU core.
     Validates a single STAC file and returns results.
 
+    Configures schema caching for this worker process to avoid redundant fetches.
+
     Args:
         file_path: Path to the STAC JSON file to validate.
+        schema_cache_size: Maximum number of schemas to cache in this worker.
 
     Returns:
         Tuple of (file_path, is_valid, list_of_errors)
@@ -71,6 +77,9 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
     errors = []
 
     try:
+        # Configure schema cache size for this worker process
+        set_schema_cache_size(schema_cache_size)
+
         # Use StacValidate for comprehensive validation (includes version check, core, and extensions)
         validator = StacValidate(file_path)
         validator.run()
@@ -109,6 +118,7 @@ def validate_concurrently(
     max_workers: Optional[int] = None,
     show_progress: bool = True,
     feature_collection: bool = False,
+    schema_cache_size: int = 16,
 ) -> List[Dict[str, Any]]:
     """
     Validates a list of STAC files concurrently using available CPU cores.
@@ -125,6 +135,7 @@ def validate_concurrently(
             - Negative int: Use all cores minus that many (e.g., -1 = all cores - 1)
         show_progress: Whether to display a progress bar (requires tqdm).
         feature_collection: If True, treat files as FeatureCollections and validate each feature.
+        schema_cache_size: Maximum number of schemas to cache per worker. Use 0 to disable caching.
 
     Returns:
         List of result dictionaries with keys: path, valid_stac, errors
@@ -206,7 +217,7 @@ def validate_concurrently(
 
             # Submit all tasks to the pool
             future_to_file = {
-                executor.submit(_validate_single_file, path): path
+                executor.submit(_validate_single_file, path, schema_cache_size): path
                 for path in file_paths
             }
 

@@ -263,6 +263,9 @@ Options:
                         each feature individually.
   --verbose             Show full JSON output for all items. By default, only
                         invalid items are shown.
+  --schema-cache-size INTEGER  Max number of schema entries to cache
+                             per worker process. Use 0 to disable
+                             schema caching. Defaults to 16.
   --help                Show this message and exit.
 ```
 
@@ -311,8 +314,9 @@ The `batch` command validates multiple STAC files concurrently using multiproces
 **Architecture:**
 
 - **Multiprocessing:** Each CPU core runs an independent Python process
-- **Per-core schema cache:** Each worker maintains its own LRU cache of downloaded schemas
-- **Cache warmup:** First file on each core downloads schemas, subsequent files use cached copies
+- **Per-worker schema cache:** Each worker maintains its own LRU cache of downloaded schemas (default 16 per worker)
+- **Cache warmup:** First file on each worker downloads schemas, subsequent files use cached copies
+- **Configurable cache:** Use `--schema-cache-size` to adjust cache size per worker (0 = disabled)
 - **Linear scaling:** Performance scales linearly with available cores (e.g., 8 cores = ~8x faster)
 - **Container-aware:** Automatically detects Docker/ECS CPU limits via `os.sched_getaffinity()`
 
@@ -343,6 +347,12 @@ $ stac-validator batch *.json --no-progress
 
 # Suppress JSON output (show only summary)
 $ stac-validator batch *.json --no-output
+
+# Configure schema cache size per worker (default: 16 schemas per worker)
+$ stac-validator batch *.json --schema-cache-size 32
+
+# Disable schema caching entirely
+$ stac-validator batch *.json --schema-cache-size 0
 ```
 
 **How It Works**
@@ -350,7 +360,10 @@ $ stac-validator batch *.json --no-output
 1. **Startup:** Detects available CPU cores (respects Docker limits)
 2. **Distribution:** Distributes files across worker processes
 3. **Validation:** Each worker validates files independently
-4. **Caching:** Schemas are cached in memory after first download
+4. **Schema Caching:** Each worker maintains its own LRU cache (default 16 schemas per worker)
+   - First file on a worker: schemas are fetched and cached
+   - Subsequent files: schemas are reused from cache (no network/disk I/O)
+   - Total memory: up to `cores × schema_cache_size` schemas in memory
 5. **Results:** Aggregates results and displays summary statistics
 
 **Example Output**
