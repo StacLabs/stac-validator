@@ -304,6 +304,7 @@ def main(
         log=log_file,
         pydantic=pydantic,
         verbose=verbose,
+        show_progress=True,
     )
 
     try:

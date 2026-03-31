@@ -74,6 +74,7 @@ class StacValidate:
         log: str = "",
         pydantic: bool = False,
         verbose: bool = False,
+        show_progress: bool = False,
     ):
         self.stac_file = stac_file
         self.collections = collections
@@ -100,6 +101,7 @@ class StacValidate:
         self.log = log
         self.pydantic = pydantic
         self.verbose = verbose
+        self.show_progress = show_progress
 
         self._original_schema_paths = {}
         cli_schema_map = schema_map or {}
@@ -788,7 +790,20 @@ class StacValidate:
         # Store the original stac_file to restore it later
         original_stac_file = self.stac_file
 
-        for item in item_collection["features"]:
+        # Use tqdm for progress bar if available and show_progress is True
+        if self.show_progress:
+            try:
+                from tqdm import tqdm
+
+                items_iter = tqdm(
+                    item_collection["features"], desc="Validating Items", unit="item"
+                )
+            except ImportError:
+                items_iter = item_collection["features"]
+        else:
+            items_iter = item_collection["features"]
+
+        for item in items_iter:
             # Update the path to include the item ID for better traceability
             if isinstance(original_stac_file, str) and "id" in item:
                 # Remove any query string from the URL before appending the item ID

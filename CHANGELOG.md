@@ -8,6 +8,8 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ### Added
 
+- Added benchmark_validation.py script for comparing batch vs legacy validation performance
+
 ### Changed
 
 ### Fixed

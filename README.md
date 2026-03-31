@@ -26,6 +26,7 @@
   - [Batch Validation](#batch-validation)
   - [Python](#python)
 - [Schema Cache Settings](#schema-cache-settings)
+- [Performance Benchmarking](#performance-benchmarking)
 - [Examples](#additional-examples)
   - [Core Validation](#--core)
   - [Custom Schema](#--custom)
@@ -619,6 +620,64 @@ Notes:
 - `StacValidate()` and `validate_dict()` do not accept a cache-size parameter.
 - Changing cache size at runtime replaces the cache instance and drops existing cached entries.
 - In multi-worker deployments, configure cache size in each worker process.
+
+## Performance Benchmarking
+
+A benchmark script is included to compare the performance of batch validation vs legacy item-collection validation. This is useful for understanding the performance improvements of the multiprocessing batch validator.
+
+### Running the Benchmark
+
+```bash
+# Test with 10,000 items (default)
+python benchmark_validation.py
+
+# Test with custom number of items
+python benchmark_validation.py --items 5000
+python benchmark_validation.py --items 50000
+
+# Run only batch validation (skip slow legacy validation)
+python benchmark_validation.py --items 10000 --batch-only
+
+# Run only legacy validation
+python benchmark_validation.py --items 10000 --legacy-only
+
+# View all options
+python benchmark_validation.py --help
+```
+
+### Example Output
+
+```
+======================================================================
+BENCHMARK RESULTS
+======================================================================
+Items tested: 10000
+
+Batch Validation (multiprocessing):
+  Time: 49.02s
+  ✅ Valid: 6666
+  ❌ Invalid: 3334
+
+Legacy Validation (single-threaded):
+  Time: 187.31s
+  ✅ Valid: 6666
+  ❌ Invalid: 3334
+
+======================================================================
+Speedup: 3.8x faster with batch validation
+Time saved: 138.29s
+```
+
+### Interpreting Results
+
+- **Speedup Factor**: Shows how many times faster batch validation is compared to legacy validation
+- **Time Saved**: The absolute time difference in seconds
+- **CPU Cores Used**: Number of CPU cores utilized by batch validation (typically all available cores)
+
+The batch validator's multiprocessing approach provides significant performance improvements, especially for large datasets. The speedup factor varies based on:
+- Number of CPU cores available
+- Size of the dataset
+- Complexity of validation (extensions, custom schemas, etc.)
 
 ## Deployment
 
