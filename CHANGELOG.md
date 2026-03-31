@@ -9,6 +9,10 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 ### Added
 
 - Added benchmark_validation.py script for comparing batch vs legacy validation performance
+- Added `--batch-size` option to `batch` command for configurable chunk processing (default: 2000)
+- Implemented compiled validator caching using `@functools.lru_cache` to avoid recompiling JSON schemas
+- Implemented direct dictionary passing to worker processes via pickle instead of temp file I/O
+- Implemented pre-warming of schema cache before forking worker processes via Copy-on-Write
 
 ### Changed
 

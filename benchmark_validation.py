@@ -98,7 +98,7 @@ def generate_test_feature_collection(num_items: int = 10000) -> str:
     return temp_file.name
 
 
-def run_batch_validation(file_path: str) -> dict:
+def run_batch_validation(file_path: str, batch_size: int = 2000) -> dict:
     """
     Run batch validation with --feature-collection.
     """
@@ -110,7 +110,14 @@ def run_batch_validation(file_path: str) -> dict:
 
     # Use Popen to capture output AND print it in real-time
     process = subprocess.Popen(
-        ["stac-validator", "batch", "--feature-collection", file_path],
+        [
+            "stac-validator",
+            "batch",
+            "--feature-collection",
+            "--batch-size",
+            str(batch_size),
+            file_path,
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -236,6 +243,12 @@ def main():
         action="store_true",
         help="Only run legacy validation benchmark",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=2000,
+        help="Batch size for chunked processing (default: 2000)",
+    )
 
     args = parser.parse_args()
 
@@ -256,7 +269,7 @@ def main():
 
         # Run batch validation if not legacy-only
         if not args.legacy_only:
-            results["batch"] = run_batch_validation(test_file)
+            results["batch"] = run_batch_validation(test_file, args.batch_size)
 
         # Run legacy validation if not batch-only
         if not args.batch_only:

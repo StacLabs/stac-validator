@@ -213,6 +213,7 @@ def validate_concurrently(
     max_workers: Optional[int] = None,
     show_progress: bool = True,
     feature_collection: bool = False,
+    batch_size: int = 2000,
 ) -> List[Dict[str, Any]]:
     """
     Validates a list of STAC files concurrently using available CPU cores.
@@ -229,6 +230,7 @@ def validate_concurrently(
             - Negative int: Use all cores minus that many (e.g., -1 = all cores - 1)
         show_progress: Whether to display a progress bar (requires tqdm).
         feature_collection: If True, treat files as FeatureCollections and validate each feature.
+        batch_size: Number of items to process at a time to bound memory usage (default: 2000).
 
     Returns:
         List of result dictionaries with keys: path, valid_stac, errors
@@ -286,6 +288,7 @@ def validate_concurrently(
             item_iter(),
             max_workers=max_workers,
             show_progress=show_progress,
+            chunk_size=batch_size,
         )
 
         # Combine error results with validation results

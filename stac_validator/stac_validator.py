@@ -374,6 +374,12 @@ def main(
     default=16,
     help="Max number of schema entries to cache per worker process. Defaults to 16.",
 )
+@click.option(
+    "--batch-size",
+    type=int,
+    default=2000,
+    help="Batch size for chunked processing. Larger batches use more memory but may be faster. Defaults to 2000.",
+)
 def batch(
     files: Tuple[str, ...],
     cores: Optional[int],
@@ -382,6 +388,7 @@ def batch(
     feature_collection: bool,
     verbose: bool,
     schema_cache_size: int,
+    batch_size: int,
 ):
     """Validate multiple STAC files concurrently using all available CPU cores.
 
@@ -427,6 +434,7 @@ def batch(
             max_workers=cores,
             show_progress=not no_progress,
             feature_collection=feature_collection,
+            batch_size=batch_size,
         )
 
         # Calculate statistics
