@@ -267,6 +267,9 @@ Options:
   --schema-cache-size INTEGER  Max number of schema entries to cache
                              per worker process. Use 0 to disable
                              schema caching. Defaults to 16.
+  --batch-size INTEGER         Batch size for chunked processing. Larger
+                               batches use more memory but may be faster.
+                               Defaults to 2000.
   --help                Show this message and exit.
 ```
 
@@ -306,6 +309,7 @@ $ stac-validator validate item.json --extensions --links --assets
 - `--item-collection` - Validate item collection responses
 - `--pydantic` - Use Pydantic models for validation
 - `--schema-cache-size` - Configure schema cache size
+- `--batch-size` - Configure batch size for chunked processing (batch command only)
 - And more (see `stac-validator validate --help`)
 
 #### Batch Validation
@@ -354,7 +358,24 @@ $ stac-validator batch *.json --schema-cache-size 32
 
 # Disable schema caching entirely
 $ stac-validator batch *.json --schema-cache-size 0
+
+# Configure batch size for chunked processing (default: 2000 items per chunk)
+$ stac-validator batch *.json --batch-size 5000
+
+# Use larger batch size for faster processing (uses more memory)
+$ stac-validator batch collection.json --feature-collection --batch-size 10000
+
+# Use smaller batch size for memory-constrained environments
+$ stac-validator batch *.json --batch-size 500
 ```
+
+**Batch Size Configuration**
+
+The `--batch-size` option controls how many items are processed in each chunk. This affects memory usage and performance:
+
+- **Default (2000):** Balanced memory usage and performance for most systems
+- **Larger values (5000-10000):** Faster processing on systems with abundant memory; reduces overhead from creating multiple worker pools
+- **Smaller values (500-1000):** Lower memory footprint; useful on memory-constrained systems or when validating very large items
 
 **How It Works**
 
