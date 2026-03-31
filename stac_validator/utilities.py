@@ -340,6 +340,42 @@ def fetch_schema_with_override(
     return fetch_and_parse_schema(schema_path)
 
 
+@functools.lru_cache(maxsize=128)
+def _get_cached_schema(schema_path: str, schema_json: str):
+    """
+    Cache parsed schemas to avoid re-parsing the same JSON schema multiple times.
+
+    This function is cached to avoid recompiling the same JSON schema multiple times.
+    The schema_json parameter is a JSON string representation of the schema to make it hashable.
+
+    Args:
+        schema_path (str): Path or URI of the JSON Schema.
+        schema_json (str): JSON string representation of the schema.
+
+    Returns:
+        dict: Parsed schema dictionary.
+    """
+    return json.loads(schema_json)
+
+
+@functools.lru_cache(maxsize=128)
+def _build_cached_validator(schema_json: str):
+    """
+    Build and cache a Draft202012Validator from a JSON schema string.
+
+    This function is cached to avoid recompiling the same JSON schema multiple times.
+    The expensive operation of building the validator's validation tree is cached here.
+
+    Args:
+        schema_json (str): JSON string representation of the schema.
+
+    Returns:
+        Draft202012Validator: Compiled validator object.
+    """
+    schema = json.loads(schema_json)
+    return Draft202012Validator(schema)
+
+
 def validate_with_ref_resolver(
     schema_path: str, content: Dict, schema_map: Optional[Dict] = None
 ) -> None:
@@ -367,8 +403,13 @@ def validate_with_ref_resolver(
         uri=schema_path, resource=resource
     )  # type: ignore
 
-    # Validate the content against the schema
-    validator = Draft202012Validator(schema, registry=registry)
+    # Use cached validator with registry for reference resolution
+    # Convert schema to JSON string for caching key
+    schema_json = json.dumps(schema, sort_keys=True, separators=(",", ":"))
+    cached_base_validator = _build_cached_validator(schema_json)
+
+    # Create a new validator with the registry (registry cannot be cached as it's mutable)
+    validator = Draft202012Validator(cached_base_validator.schema, registry=registry)
     validator.validate(content)
 
 
