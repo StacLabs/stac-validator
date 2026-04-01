@@ -419,9 +419,7 @@ Validation completed in 1.10s
 
 | Scenario | Single-threaded | Batch (8 cores) | Speedup |
 |----------|-----------------|-----------------|---------|
-| 100 items | ~5 seconds | ~1 second | 5x |
-| 1000 items | ~50 seconds | ~6 seconds | 8x |
-| 10000 items | ~500 seconds | ~60 seconds | 8x |
+| 10000 items | ~130 seconds | ~22 seconds | 5.9x |
 
 *Times vary based on schema complexity and network latency for first download*
 
@@ -675,18 +673,18 @@ BENCHMARK RESULTS
 Items tested: 10000
 
 Batch Validation (multiprocessing):
-  Time: 49.02s
-  ✅ Valid: 6666
-  ❌ Invalid: 3334
+  Time: 22.43s
+  ✅ Valid: 0
+  ❌ Invalid: 10000
 
 Legacy Validation (single-threaded):
-  Time: 187.31s
-  ✅ Valid: 6666
-  ❌ Invalid: 3334
+  Time: 131.62s
+  ✅ Valid: 0
+  ❌ Invalid: 10000
 
 ======================================================================
-Speedup: 3.8x faster with batch validation
-Time saved: 138.29s
+Speedup: 5.9x faster with batch validation
+Time saved: 109.19s
 ```
 
 ### Interpreting Results
