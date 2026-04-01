@@ -398,7 +398,7 @@ def _chunked_iterable(iterable: Iterable, size: int):
 def validate_dicts(
     items: Iterable[Dict[str, Any]],
     max_workers: Optional[int] = None,
-    show_progress: bool = True,
+    show_progress: bool = False,
     chunk_size: int = 2000,
 ) -> List[Dict[str, Any]]:
     """
@@ -415,7 +415,7 @@ def validate_dicts(
             - None or 0: Use all available cores (default)
             - Positive int: Use that many cores (capped at available)
             - Negative int: Use all cores minus that many
-        show_progress: Whether to show progress bar (default: True)
+        show_progress: Whether to show progress bar (default: False). Set to True for CLI usage.
         chunk_size: Number of items to process at a time to bound memory usage.
 
     Returns:
