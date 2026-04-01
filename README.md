@@ -26,6 +26,7 @@
   - [Batch Validation](#batch-validation)
   - [Python](#python)
 - [Schema Cache Settings](#schema-cache-settings)
+- [Performance Benchmarking](#performance-benchmarking)
 - [Examples](#additional-examples)
   - [Core Validation](#--core)
   - [Custom Schema](#--custom)
@@ -152,7 +153,7 @@ Usage: stac-validator [OPTIONS] COMMAND [ARGS]...
   Usage:
     stac-validator validate <file> [options]
     stac-validator batch <files> [options]
-    stac-validator batch <file> --feature-collection [options]
+    stac-validator batch <file> --item-collection [options]
       
 
 Options:
@@ -246,7 +247,7 @@ Usage: stac-validator batch [OPTIONS] FILES...
       $ stac-validator batch file1.json file2.json file3.json
 
       # Validate a GeoJSON FeatureCollection (validates each feature individually)
-      $ stac-validator batch --feature-collection sample_data/sentinel-cogs_0_100.json
+      $ stac-validator batch --item-collection sample_data/sentinel-cogs_0_100.json
 
       # Use only 4 cores
       $ stac-validator batch *.json --cores 4
@@ -259,13 +260,16 @@ Options:
                         Defaults to all available cores.
   --no-progress         Disable progress bar during validation.
   --no-output           Do not print output to console.
-  --feature-collection  Treat files as GeoJSON FeatureCollections and validate
+  --item-collection  Treat files as GeoJSON FeatureCollections and validate
                         each feature individually.
   --verbose             Show full JSON output for all items. By default, only
                         invalid items are shown.
   --schema-cache-size INTEGER  Max number of schema entries to cache
                              per worker process. Use 0 to disable
                              schema caching. Defaults to 16.
+  --batch-size INTEGER         Batch size for chunked processing. Larger
+                               batches use more memory but may be faster.
+                               Defaults to 2000.
   --help                Show this message and exit.
 ```
 
@@ -305,6 +309,7 @@ $ stac-validator validate item.json --extensions --links --assets
 - `--item-collection` - Validate item collection responses
 - `--pydantic` - Use Pydantic models for validation
 - `--schema-cache-size` - Configure schema cache size
+- `--batch-size` - Configure batch size for chunked processing (batch command only)
 - And more (see `stac-validator validate --help`)
 
 #### Batch Validation
@@ -330,7 +335,7 @@ $ stac-validator batch *.json
 $ stac-validator batch item1.json item2.json item3.json
 
 # Validate a FeatureCollection (extracts and validates each feature)
-$ stac-validator batch collection.json --feature-collection
+$ stac-validator batch collection.json --item-collection
 ```
 
 **Options**
@@ -353,7 +358,24 @@ $ stac-validator batch *.json --schema-cache-size 32
 
 # Disable schema caching entirely
 $ stac-validator batch *.json --schema-cache-size 0
+
+# Configure batch size for chunked processing (default: 2000 items per chunk)
+$ stac-validator batch *.json --batch-size 5000
+
+# Use larger batch size for faster processing (uses more memory)
+$ stac-validator batch collection.json --item-collection --batch-size 10000
+
+# Use smaller batch size for memory-constrained environments
+$ stac-validator batch *.json --batch-size 500
 ```
+
+**Batch Size Configuration**
+
+The `--batch-size` option controls how many items are processed in each chunk. This affects memory usage and performance:
+
+- **Default (2000):** Balanced memory usage and performance for most systems
+- **Larger values (5000-10000):** Faster processing on systems with abundant memory; reduces overhead from creating multiple worker pools
+- **Smaller values (500-1000):** Lower memory footprint; useful on memory-constrained systems or when validating very large items
 
 **How It Works**
 
@@ -369,7 +391,7 @@ $ stac-validator batch *.json --schema-cache-size 0
 **Example Output**
 
 ```bash
-$ stac-validator batch --feature-collection sample_data/sentinel-cogs_0_100.json
+$ stac-validator batch --item-collection sample_data/sentinel-cogs_0_100.json
 [
     {
         "path": "sample_data/sentinel-cogs_0_100.json[0]",
@@ -397,9 +419,7 @@ Validation completed in 1.10s
 
 | Scenario | Single-threaded | Batch (8 cores) | Speedup |
 |----------|-----------------|-----------------|---------|
-| 100 items | ~5 seconds | ~1 second | 5x |
-| 1000 items | ~50 seconds | ~6 seconds | 8x |
-| 10000 items | ~500 seconds | ~60 seconds | 8x |
+| 10000 items | ~130 seconds | ~22 seconds | 5.9x |
 
 *Times vary based on schema complexity and network latency for first download*
 
@@ -619,6 +639,64 @@ Notes:
 - `StacValidate()` and `validate_dict()` do not accept a cache-size parameter.
 - Changing cache size at runtime replaces the cache instance and drops existing cached entries.
 - In multi-worker deployments, configure cache size in each worker process.
+
+## Performance Benchmarking
+
+A benchmark script is included to compare the performance of batch validation vs legacy item-collection validation. This is useful for understanding the performance improvements of the multiprocessing batch validator.
+
+### Running the Benchmark
+
+```bash
+# Test with 10,000 items (default)
+python benchmark_validation.py
+
+# Test with custom number of items
+python benchmark_validation.py --items 5000
+python benchmark_validation.py --items 50000
+
+# Run only batch validation (skip slow legacy validation)
+python benchmark_validation.py --items 10000 --batch-only
+
+# Run only legacy validation
+python benchmark_validation.py --items 10000 --legacy-only
+
+# View all options
+python benchmark_validation.py --help
+```
+
+### Example Output
+
+```
+======================================================================
+BENCHMARK RESULTS
+======================================================================
+Items tested: 10000
+
+Batch Validation (multiprocessing):
+  Time: 22.43s
+  ✅ Valid: 0
+  ❌ Invalid: 10000
+
+Legacy Validation (single-threaded):
+  Time: 131.62s
+  ✅ Valid: 0
+  ❌ Invalid: 10000
+
+======================================================================
+Speedup: 5.9x faster with batch validation
+Time saved: 109.19s
+```
+
+### Interpreting Results
+
+- **Speedup Factor**: Shows how many times faster batch validation is compared to legacy validation
+- **Time Saved**: The absolute time difference in seconds
+- **CPU Cores Used**: Number of CPU cores utilized by batch validation (typically all available cores)
+
+The batch validator's multiprocessing approach provides significant performance improvements, especially for large datasets. The speedup factor varies based on:
+- Number of CPU cores available
+- Size of the dataset
+- Complexity of validation (extensions, custom schemas, etc.)
 
 ## Deployment
 

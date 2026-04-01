@@ -2,13 +2,65 @@
 
 import concurrent.futures
 import json
+import logging
 import multiprocessing
-import os
-import tempfile
 from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from .utilities import _build_cached_validator
 from .validate import StacValidate
+
+logger = logging.getLogger(__name__)
+
+
+def _warm_schema_cache(stac_version: str = "1.0.0") -> None:
+    """
+    Pre-warm the schema cache before forking worker processes.
+
+    This function loads and compiles core STAC schemas in the main process.
+    When ProcessPoolExecutor forks child processes, they inherit the parent's
+    memory via Copy-on-Write (CoW), so all workers get a fully-warmed cache
+    without making any network requests.
+
+    Args:
+        stac_version: STAC version to use for schema selection (e.g., "1.0.0" or "1.1.0")
+
+    Core schemas warmed:
+    - STAC Item
+    - STAC Collection
+    - STAC Catalog
+    """
+    try:
+        import os
+
+        # Use local schema files bundled with the package
+        # Support both v1.0.0 and v1.1.0
+        schema_dir = os.path.join(
+            os.path.dirname(__file__), "local_schemas", stac_version
+        )
+
+        core_schemas = [
+            os.path.join(schema_dir, "item.json"),
+            os.path.join(schema_dir, "collection.json"),
+            os.path.join(schema_dir, "catalog.json"),
+        ]
+
+        from .utilities import fetch_and_parse_schema
+
+        # Load and cache each schema
+        for schema_path in core_schemas:
+            try:
+                schema = fetch_and_parse_schema(schema_path)
+                # Convert to JSON string and cache via _build_cached_validator
+                schema_json = json.dumps(schema, sort_keys=True, separators=(",", ":"))
+                _build_cached_validator(schema_json)
+            except Exception:
+                # If a schema fails to load, continue with others
+                pass
+
+    except Exception:
+        # If cache warming fails entirely, continue without it
+        pass
 
 
 def get_optimal_worker_count(max_workers: Optional[int] = None) -> int:
@@ -32,13 +84,13 @@ def get_optimal_worker_count(max_workers: Optional[int] = None) -> int:
         on Linux to detect the actual cores allocated to the container, rather than
         the host machine's total cores.
     """
-    import os
+    import os as os_module
 
     # Try to get container-aware core count on Linux
     try:
-        if hasattr(os, "sched_getaffinity"):
+        if hasattr(os_module, "sched_getaffinity"):
             # Linux: respects Docker/container CPU limits
-            total_cores = len(os.sched_getaffinity(0))
+            total_cores = len(os_module.sched_getaffinity(0))
         else:
             # Fallback for non-Linux systems
             total_cores = multiprocessing.cpu_count()
@@ -109,18 +161,76 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
     return file_path, is_valid, errors
 
 
+def _validate_dict(
+    item_dict: Dict[str, Any], source_path: str
+) -> Tuple[str, bool, Dict[str, Any], str]:
+    """
+    Worker function that validates a STAC item dictionary directly (no temp files).
+
+    This function receives pickled dictionaries from the main process, avoiding
+    expensive disk I/O. Each worker process has its own isolated schema cache.
+
+    Args:
+        item_dict: Dictionary representation of a STAC item to validate.
+        source_path: Display path for result reporting (e.g., "file.json[0]").
+
+    Returns:
+        Tuple of (source_path, is_valid, message_dict, item_id)
+        where message_dict is the complete validation result from StacValidate
+    """
+    item_id = item_dict.get("id", "unknown")
+    message = {}
+
+    try:
+        # Validate the dictionary directly without writing to disk
+        # StacValidate can accept a dict via validate_dict() method
+        validator = StacValidate()
+        validator.stac_content = item_dict
+
+        # Set STAC version from item
+        validator.version = item_dict.get("stac_version", "1.0.0")
+
+        # Run validation on the dictionary
+        validator.validate_dict(item_dict)
+
+        # Get the validation result message
+        if validator.message:
+            messages = validator.message
+            if isinstance(messages, list) and len(messages) > 0:
+                message = messages[0]
+            else:
+                message = messages if isinstance(messages, dict) else {}
+
+            # Set path to the display path (not a real file)
+            message["path"] = source_path
+
+    except Exception as e:
+        # Catch any exception during validation
+        message = {
+            "path": source_path,
+            "valid_stac": False,
+            "error_type": "Exception",
+            "error_message": f"Critical error processing item: {str(e)}",
+            "failed_schema": "",
+        }
+
+    is_valid = message.get("valid_stac", False)
+    return source_path, is_valid, message, item_id
+
+
 def validate_concurrently(
     file_paths: List[str],
     max_workers: Optional[int] = None,
     show_progress: bool = True,
     feature_collection: bool = False,
+    batch_size: int = 2000,
 ) -> List[Dict[str, Any]]:
     """
     Validates a list of STAC files concurrently using available CPU cores.
 
     Uses ProcessPoolExecutor to bypass Python's GIL by creating separate Python
-    processes for each worker. Each core gets its own schema cache, which is
-    warmed up on the first file and then reused for subsequent files.
+    processes for each worker. Pre-warms the schema cache in the main process
+    before forking, so all workers inherit a fully-populated cache via Copy-on-Write.
 
     Args:
         file_paths: List of paths to STAC JSON files or FeatureCollections.
@@ -130,6 +240,7 @@ def validate_concurrently(
             - Negative int: Use all cores minus that many (e.g., -1 = all cores - 1)
         show_progress: Whether to display a progress bar (requires tqdm).
         feature_collection: If True, treat files as FeatureCollections and validate each feature.
+        batch_size: Number of items to process at a time to bound memory usage (default: 2000).
 
     Returns:
         List of result dictionaries with keys: path, valid_stac, errors
@@ -179,10 +290,12 @@ def validate_concurrently(
                     )
 
         # Delegate to validate_dicts for chunked, memory-safe processing
+        # validate_dicts will detect STAC version from first item and warm cache
         validation_results = validate_dicts(
             item_iter(),
             max_workers=max_workers,
             show_progress=show_progress,
+            chunk_size=batch_size,
         )
 
         # Combine error results with validation results
@@ -257,15 +370,16 @@ def _chunked_iterable(iterable: Iterable, size: int):
 def validate_dicts(
     items: Iterable[Dict[str, Any]],
     max_workers: Optional[int] = None,
-    show_progress: bool = True,
-    chunk_size: int = 1000,
+    show_progress: bool = False,
+    chunk_size: int = 2000,
 ) -> List[Dict[str, Any]]:
     """
     Validate an iterable of STAC item dictionaries concurrently.
 
-    Internally writes dictionaries to temporary files in bounded chunks for
-    concurrent validation, preventing both out-of-memory (OOM) errors and
-    disk/inode exhaustion in containerized environments.
+    Passes dictionaries directly to worker processes via pickle (memory-based),
+    avoiding expensive disk I/O. Pre-warms the schema cache in the main process
+    before forking, so all workers inherit a fully-populated cache via Copy-on-Write.
+    Processes items in bounded chunks to prevent out-of-memory errors.
 
     Args:
         items: Iterable of STAC item dictionaries to validate
@@ -273,73 +387,134 @@ def validate_dicts(
             - None or 0: Use all available cores (default)
             - Positive int: Use that many cores (capped at available)
             - Negative int: Use all cores minus that many
-        show_progress: Whether to show progress bar (default: True)
-        chunk_size: Number of items to process at a time to bound disk and memory usage.
+        show_progress: Whether to show progress bar (default: False). Set to True for CLI usage.
+        chunk_size: Number of items to process at a time to bound memory usage.
 
     Returns:
         List of validation results with path, valid_stac, and errors (if any)
     """
     all_results = []
 
-    # Process items in bounded chunks to protect memory and /tmp disk space
-    for chunk in _chunked_iterable(items, chunk_size):
-        temp_files = []
-        temp_file_to_source = (
-            {}
-        )  # Map temp file paths to source info for result display
-        try:
-            # Write this specific chunk to temporary files
-            for item in chunk:
-                # Extract source metadata if present (from validate_concurrently)
-                # Use .get() to avoid mutating the input dictionary
-                source_file = item.get("__source_file__")
-                feature_index = item.get("__feature_index__")
+    try:
+        from tqdm import tqdm
 
-                # Create a payload without internal metadata keys to avoid mutating input
-                payload = {
-                    k: v
-                    for k, v in item.items()
-                    if k not in ("__source_file__", "__feature_index__")
-                }
+        has_tqdm = True
+    except ImportError:
+        has_tqdm = False
+        show_progress = False
 
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".json", delete=False
-                ) as f:
-                    json.dump(payload, f)
-                    tmp_path = f.name
-                    temp_files.append(tmp_path)
+    optimal_workers = get_optimal_worker_count(max_workers)
 
-                    # Store source info for result mapping
+    # Detect STAC version from first item and warm cache accordingly
+    stac_version = "1.0.0"  # default
+    items_list = list(items)
+    if items_list:
+        first_item = items_list[0]
+        stac_version = first_item.get("stac_version", "1.0.0")
+
+    # Pre-warm the schema cache in the main process before forking workers
+    # This leverages Copy-on-Write so all workers inherit the warmed cache
+    _warm_schema_cache(stac_version=stac_version)
+
+    # Create a single executor for the entire run to reuse workers across chunks
+    # This preserves the schema cache across chunks and eliminates fork/spawn overhead
+    try:
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=optimal_workers
+        ) as executor:
+            total_items = len(items_list)
+            progress_bar = None
+
+            # Initialize progress bar if available
+            if show_progress and has_tqdm:
+                progress_bar = tqdm(  # type: ignore
+                    total=total_items,
+                    desc="Validating Items",
+                    unit="item",
+                )
+
+            # Process items in chunks: submit a chunk, collect results, then submit next
+            # This bounds in-flight futures and memory usage while reusing workers
+            for chunk in _chunked_iterable(items_list, chunk_size):
+                if not chunk:
+                    continue
+
+                # Submit all items in this chunk
+                future_to_item = {}
+                for idx, item in enumerate(chunk):
+                    # Extract source metadata if present
+                    source_file = item.get("__source_file__")
+                    feature_index = item.get("__feature_index__")
+
+                    # Create display path for results
                     if source_file is not None:
                         display_path = (
                             f"{source_file}[{feature_index}]"
                             if feature_index is not None
                             else source_file
                         )
-                        temp_file_to_source[tmp_path] = display_path
+                    else:
+                        display_path = f"item-{idx}"
 
-            # Validate the chunk concurrently
-            chunk_results = validate_concurrently(
-                temp_files,
-                max_workers=max_workers,
-                show_progress=show_progress,
-                feature_collection=False,  # Already expanded, no need to re-process
+                    # Create payload without internal metadata keys
+                    payload = {
+                        k: v
+                        for k, v in item.items()
+                        if k not in ("__source_file__", "__feature_index__")
+                    }
+
+                    # Submit to worker - dictionary is pickled automatically
+                    future = executor.submit(_validate_dict, payload, display_path)
+                    future_to_item[future] = (display_path, idx)
+
+                # Collect results for this chunk as they finish
+                for future in concurrent.futures.as_completed(future_to_item):
+                    display_path, idx = future_to_item[future]
+                    source_path, is_valid, message, item_id = future.result()
+
+                    # Use the complete message from validation
+                    result = message.copy() if message else {}
+
+                    # Ensure required fields are present
+                    if "path" not in result:
+                        result["path"] = source_path
+                    if "valid_stac" not in result:
+                        result["valid_stac"] = is_valid
+
+                    # Add item_id for reference
+                    result["item_id"] = item_id
+
+                    all_results.append(result)
+
+                    # Update progress bar
+                    if progress_bar:
+                        progress_bar.update(1)
+
+            # Close progress bar
+            if progress_bar:
+                progress_bar.close()
+
+    except Exception as e:
+        # If processing fails, record error for all items
+        for idx, item in enumerate(items_list):
+            source_file = item.get("__source_file__")
+            feature_index = item.get("__feature_index__")
+
+            if source_file is not None:
+                display_path = (
+                    f"{source_file}[{feature_index}]"
+                    if feature_index is not None
+                    else source_file
+                )
+            else:
+                display_path = f"item-{idx}"
+
+            all_results.append(
+                {
+                    "path": display_path,
+                    "valid_stac": False,
+                    "errors": [f"Chunk processing error: {str(e)}"],
+                }
             )
-
-            # Map results back to original source paths if available
-            for result in chunk_results:
-                result_path = result["path"]
-                if result_path in temp_file_to_source:
-                    result["path"] = temp_file_to_source[result_path]
-
-            all_results.extend(chunk_results)
-
-        finally:
-            # Strictly clean up temporary files before moving to the next chunk
-            for temp_file in temp_files:
-                try:
-                    os.unlink(temp_file)
-                except OSError:
-                    pass
 
     return all_results

@@ -16,6 +16,37 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ### Updated
 
+## [v4.1.0] - 2026-04-01
+
+### Added
+
+- Added benchmark_validation.py script for comparing batch vs legacy validation performance [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Added `--batch-size` option to `batch` command for configurable chunk processing (default: 2000) [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+
+### Changed
+
+- Implemented compiled validator caching using `@functools.lru_cache` to avoid recompiling JSON schemas [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Implemented direct dictionary passing to worker processes via pickle instead of temp file I/O [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Implemented pre-warming of schema cache before forking worker processes via Copy-on-Write [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Allow both `--feature-collection` and `--item-collection` in `batch` and `validate` command interface [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Updated batch command output format to match validate command, including all fields: version, path, schema, error_type, error_message, failed_schema, recommendation [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Unified validator cache control with `--schema-cache-size` option to control both fetch/parse and compiled validator caching [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Added input validation for `--batch-size` option (minimum value: 1) [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+### Fixed
+
+- Fixed batch command error grouping to work with new validation message format [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Fixed validator cache to respect runtime `--schema-cache-size` changes via dynamic cache builder [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
 ## [v4.0.1] - 2026-03-31
 
 ### Updated
@@ -382,7 +413,8 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - With the newest version - 1.0.0-beta.2 - items will run through jsonchema validation before the PySTAC validation. The reason for this is that jsonschema will give more informative error messages. This should be addressed better in the future. This is not the case with the --recursive option as time can be a concern here with larger collections.
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
-[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.0.1..main
+[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.1.0..main
+[v4.1.0]: https://github.com/sparkgeo/stac-validator/compare/v4.0.1..v4.1.0
 [v4.0.1]: https://github.com/sparkgeo/stac-validator/compare/v4.0.0..v4.0.1
 [v4.0.0]: https://github.com/sparkgeo/stac-validator/compare/v3.11.0..v4.0.0
 [v3.11.0]: https://github.com/sparkgeo/stac-validator/compare/v3.10.2..v3.11.0
