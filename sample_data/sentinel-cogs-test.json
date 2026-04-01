@@ -53,6 +53,7 @@
                 "sentinel:product_id": "S2B_MSIL2A_20191211T161339_N0213_R111_T01CDH_20191211T195221",
                 "sentinel:data_coverage": 0.0,
                 "eo:cloud_cover": 0.0,
+                "eo:bands": [],
                 "sentinel:valid_cloud_cover": true,
                 "proj:centroid": {
                     "lat": -82.84867670781385,

@@ -444,12 +444,51 @@ def batch(
         # Print details of failed validations first (only in non-verbose mode)
         if not no_output and invalid_count > 0 and not verbose:
             click.secho("Failed validations:", fg="red")
+
+            # Group errors by (message, schema) and collect item IDs
+            from collections import defaultdict
+
+            error_groups = defaultdict(list)
+
             for result in results:
                 if not result.get("valid_stac", False):
-                    click.secho(f"  {result['path']}", fg="red")
+                    # Try to get item ID from result, fallback to path
+                    item_id = result.get("item_id", result.get("path", "unknown"))
                     if "errors" in result:
                         for error in result["errors"]:
-                            click.secho(f"    - {error}", fg="yellow")
+                            # Handle both dict and string error formats
+                            if isinstance(error, dict):
+                                error_msg = error.get("message", str(error))
+                                error_schema = error.get("schema", "")
+                                error_key = (error_msg, error_schema)
+                            else:
+                                error_key = (str(error), "")
+                            error_groups[error_key].append(item_id)
+
+            # Print grouped errors with compact formatting
+            for idx, ((error_msg, error_schema), item_ids) in enumerate(
+                sorted(error_groups.items())
+            ):
+                # Add blank line between error sections (but not before the first one)
+                if idx > 0:
+                    click.secho()
+
+                # Format item IDs compactly (max 5 per line)
+                if len(item_ids) <= 5:
+                    ids_str = ", ".join(str(id) for id in item_ids)
+                    click.secho(f"  [{ids_str}]", fg="red")
+                else:
+                    # For many items, show first few and count
+                    first_few = ", ".join(str(id) for id in item_ids[:5])
+                    remaining = len(item_ids) - 5
+                    click.secho(f"  [{first_few}, ... +{remaining} more]", fg="red")
+
+                # Display error message
+                click.secho(f"    - {error_msg}", fg="yellow")
+
+                # Display schema if available
+                if error_schema:
+                    click.secho(f"      Schema: {error_schema}", fg="cyan")
 
         # Print full JSON output in verbose mode
         if not no_output and verbose:

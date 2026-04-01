@@ -1,5 +1,6 @@
 import functools
 import json
+import logging
 import os
 import ssl
 from typing import Dict, Optional, Tuple
@@ -169,7 +170,7 @@ def fetch_and_parse_file(input_path: str, headers: Optional[Dict] = None) -> Dic
     """
     try:
         if is_url(input_path):
-            resp = requests.get(input_path, headers=headers)
+            resp = requests.get(input_path, headers=headers, timeout=10)
             resp.raise_for_status()
             data = resp.json()
         else:
@@ -219,6 +220,48 @@ def _fetch_and_parse_schema_cache_clear() -> None:
     _schema_cache.cache_clear()
 
 
+_cached_schemas = set()
+
+
+def _map_extension_url_to_local(url: str) -> str:
+    """
+    Map remote extension schema URLs to local file paths if available.
+
+    For example:
+    - https://stac-extensions.github.io/eo/v1.0.0/schema.json -> local_schemas/extensions/eo-v1.0.0.json
+    - https://stac-extensions.github.io/projection/v1.0.0/schema.json -> local_schemas/extensions/projection-v1.0.0.json
+
+    Args:
+        url: Remote schema URL
+
+    Returns:
+        Local file path if available, otherwise returns the original URL
+    """
+    import os
+    import re
+
+    # Match pattern: https://stac-extensions.github.io/{extension}/{version}/schema.json
+    match = re.match(
+        r"https://stac-extensions\.github\.io/([^/]+)/v([^/]+)/schema\.json", url
+    )
+
+    if match:
+        extension_name = match.group(1)
+        version = match.group(2)
+        local_file = os.path.join(
+            os.path.dirname(__file__),
+            "local_schemas",
+            "extensions",
+            f"{extension_name}-v{version}.json",
+        )
+
+        # Return local path if file exists, otherwise return original URL
+        if os.path.exists(local_file):
+            return local_file
+
+    return url
+
+
 def fetch_and_parse_schema(input_path: str) -> Dict:
     """Fetches and parses a JSON schema file from a URL or local file using a cache.
 
@@ -227,6 +270,8 @@ def fetch_and_parse_schema(input_path: str) -> Dict:
     function uses the requests library to download the file, otherwise it opens the
     local file with the json library. Additionally, this function caches the results of
     previous function calls to reduce the number of times the file is fetched and parsed.
+
+    For extension schemas, attempts to use local files if available to avoid network requests.
 
     Args:
         input_path: A string representing the URL or local file path to the JSON schema file.
@@ -238,7 +283,28 @@ def fetch_and_parse_schema(input_path: str) -> Dict:
         ValueError: If the input is not a valid URL or local file path.
         requests.exceptions.RequestException: If there is an error while downloading the file.
     """
-    return _schema_cache(input_path)
+    logger = logging.getLogger(__name__)
+
+    # Try to map extension URLs to local files
+    resolved_path = _map_extension_url_to_local(input_path)
+
+    # Log when fetching a new schema
+    if resolved_path not in _cached_schemas:
+        if resolved_path != input_path:
+            logger.info(
+                f"Using local schema: {resolved_path} (mapped from {input_path})"
+            )
+        else:
+            logger.info(f"Fetching schema: {input_path}")
+
+    result = _schema_cache(resolved_path)
+
+    # Track which schemas have been cached for logging
+    if resolved_path not in _cached_schemas:
+        _cached_schemas.add(resolved_path)
+        logger.info(f"✓ Cached schema: {resolved_path}")
+
+    return result
 
 
 fetch_and_parse_schema.cache_info = _fetch_and_parse_schema_cache_info  # type: ignore[attr-defined]
@@ -247,15 +313,26 @@ fetch_and_parse_schema.cache_clear = _fetch_and_parse_schema_cache_clear  # type
 
 def set_schema_addr(version: str, stac_type: str) -> str:
     """Set the URL address for the JSON schema to be used for validating the STAC object.
-    Validate new versions at schemas.stacspec.org
+    Uses local schema files for core STAC schemas (v1.0.0 and v1.1.0) to avoid network requests.
+    Falls back to remote URLs for other versions.
 
     Args:
         version (str): The version number of the STAC object.
         stac_type (str): The type of the STAC object (e.g. "item", "collection").
 
     Returns:
-        str: The URL address for the JSON schema.
+        str: The file path or URL address for the JSON schema.
     """
+    # Use local schemas for supported versions to avoid network requests
+    if version in ("1.0.0", "1.1.0"):
+        import os
+
+        schema_dir = os.path.join(os.path.dirname(__file__), "local_schemas", version)
+        schema_file = os.path.join(schema_dir, f"{stac_type}.json")
+        if os.path.exists(schema_file):
+            return schema_file
+
+    # Fall back to remote URLs for unsupported versions
     if version in NEW_VERSIONS:
         return f"https://schemas.stacspec.org/v{version}/{stac_type}-spec/json-schema/{stac_type}.json"
     else:

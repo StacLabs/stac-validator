@@ -2,6 +2,7 @@
 
 import concurrent.futures
 import json
+import logging
 import multiprocessing
 from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -9,8 +10,10 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from .utilities import _build_cached_validator
 from .validate import StacValidate
 
+logger = logging.getLogger(__name__)
 
-def _warm_schema_cache() -> None:
+
+def _warm_schema_cache(stac_version: str = "1.0.0") -> None:
     """
     Pre-warm the schema cache before forking worker processes.
 
@@ -19,35 +22,44 @@ def _warm_schema_cache() -> None:
     memory via Copy-on-Write (CoW), so all workers get a fully-warmed cache
     without making any network requests.
 
+    Args:
+        stac_version: STAC version to use for schema selection (e.g., "1.0.0" or "1.1.0")
+
     Core schemas warmed:
-    - STAC Item (v1.0.0)
-    - STAC Collection (v1.0.0)
-    - STAC Catalog (v1.0.0)
+    - STAC Item
+    - STAC Collection
+    - STAC Catalog
     """
     try:
-        # Core STAC schema URLs that are commonly used
+        import os
+
+        # Use local schema files bundled with the package
+        # Support both v1.0.0 and v1.1.0
+        schema_dir = os.path.join(
+            os.path.dirname(__file__), "local_schemas", stac_version
+        )
+
         core_schemas = [
-            "https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json",
-            "https://schemas.stacspec.org/v1.0.0/collection-spec/v1.0.0/collection.json",
-            "https://schemas.stacspec.org/v1.0.0/catalog-spec/v1.0.0/catalog.json",
+            os.path.join(schema_dir, "item.json"),
+            os.path.join(schema_dir, "collection.json"),
+            os.path.join(schema_dir, "catalog.json"),
         ]
 
         from .utilities import fetch_and_parse_schema
 
-        # Fetch and parse each schema to populate the cache
-        for schema_url in core_schemas:
+        # Load and cache each schema
+        for schema_path in core_schemas:
             try:
-                schema = fetch_and_parse_schema(schema_url)
+                schema = fetch_and_parse_schema(schema_path)
                 # Convert to JSON string and cache via _build_cached_validator
                 schema_json = json.dumps(schema, sort_keys=True, separators=(",", ":"))
                 _build_cached_validator(schema_json)
             except Exception:
                 # If a schema fails to load, continue with others
-                # This ensures partial cache warming even if some schemas are unavailable
                 pass
+
     except Exception:
         # If cache warming fails entirely, continue without it
-        # The validators will still work, just without the pre-warmed cache
         pass
 
 
@@ -151,7 +163,7 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
 
 def _validate_dict(
     item_dict: Dict[str, Any], source_path: str
-) -> Tuple[str, bool, List[str]]:
+) -> Tuple[str, bool, List[Dict[str, str]], str]:
     """
     Worker function that validates a STAC item dictionary directly (no temp files).
 
@@ -163,9 +175,11 @@ def _validate_dict(
         source_path: Display path for result reporting (e.g., "file.json[0]").
 
     Returns:
-        Tuple of (source_path, is_valid, list_of_errors)
+        Tuple of (source_path, is_valid, list_of_error_dicts, item_id)
+        where error_dicts contain 'message' and 'schema' keys
     """
     errors = []
+    item_id = item_dict.get("id", "unknown")
 
     try:
         # Validate the dictionary directly without writing to disk
@@ -186,26 +200,50 @@ def _validate_dict(
                 if isinstance(messages, list) and len(messages) > 0:
                     msg_obj = messages[0]
                     if not msg_obj.get("valid_stac", False):
+                        # Extract schema information - prefer failed_schema, then schema field
+                        failed_schema = msg_obj.get("failed_schema", "")
+                        if not failed_schema:
+                            # Try to get from schema field (list of schemas checked)
+                            schema_list = msg_obj.get("schema", [])
+                            # Use the last schema in the list (most likely the one that failed)
+                            failed_schema = schema_list[-1] if schema_list else ""
+
                         # Try multiple error field names
                         if "errors" in msg_obj:
-                            errors.extend(msg_obj["errors"])
+                            for error_msg in msg_obj["errors"]:
+                                errors.append(
+                                    {"message": error_msg, "schema": failed_schema}
+                                )
                         elif "error_message" in msg_obj:
-                            errors.append(msg_obj["error_message"])
+                            errors.append(
+                                {
+                                    "message": msg_obj["error_message"],
+                                    "schema": failed_schema,
+                                }
+                            )
                         else:
                             errors.append(
-                                f"{msg_obj.get('error_type', 'ValidationError')}"
+                                {
+                                    "message": f"{msg_obj.get('error_type', 'ValidationError')}",
+                                    "schema": failed_schema,
+                                }
                             )
             except (KeyError, IndexError, TypeError):
                 # If we can't parse, just use the raw message
                 if validator.message:
-                    errors.append(str(validator.message))
+                    errors.append({"message": str(validator.message), "schema": ""})
 
     except Exception as e:
         # Catch any exception during validation
-        return source_path, False, [f"Critical error processing item: {str(e)}"]
+        return (
+            source_path,
+            False,
+            [{"message": f"Critical error processing item: {str(e)}", "schema": ""}],
+            item_id,
+        )
 
     is_valid = len(errors) == 0
-    return source_path, is_valid, errors
+    return source_path, is_valid, errors, item_id
 
 
 def validate_concurrently(
@@ -235,10 +273,6 @@ def validate_concurrently(
     Returns:
         List of result dictionaries with keys: path, valid_stac, errors
     """
-    # Pre-warm the schema cache in the main process before forking workers
-    # This leverages Copy-on-Write so all workers inherit the warmed cache
-    _warm_schema_cache()
-
     # If feature_collection mode, extract features and delegate to validate_dicts
     # for memory-safe chunked processing
     if feature_collection:
@@ -284,6 +318,7 @@ def validate_concurrently(
                     )
 
         # Delegate to validate_dicts for chunked, memory-safe processing
+        # validate_dicts will detect STAC version from first item and warm cache
         validation_results = validate_dicts(
             item_iter(),
             max_workers=max_workers,
@@ -386,10 +421,6 @@ def validate_dicts(
     Returns:
         List of validation results with path, valid_stac, and errors (if any)
     """
-    # Pre-warm the schema cache in the main process before forking workers
-    # This leverages Copy-on-Write so all workers inherit the warmed cache
-    _warm_schema_cache()
-
     all_results = []
 
     try:
@@ -402,8 +433,19 @@ def validate_dicts(
 
     optimal_workers = get_optimal_worker_count(max_workers)
 
+    # Detect STAC version from first item and warm cache accordingly
+    stac_version = "1.0.0"  # default
+    items_list = list(items)
+    if items_list:
+        first_item = items_list[0]
+        stac_version = first_item.get("stac_version", "1.0.0")
+
+    # Pre-warm the schema cache in the main process before forking workers
+    # This leverages Copy-on-Write so all workers inherit the warmed cache
+    _warm_schema_cache(stac_version=stac_version)
+
     # Process items in bounded chunks to protect memory
-    for chunk in _chunked_iterable(items, chunk_size):
+    for chunk in _chunked_iterable(items_list, chunk_size):
         chunk_list = list(chunk)
         if not chunk_list:
             continue
@@ -454,11 +496,12 @@ def validate_dicts(
                 # Collect results as they finish
                 for future in iterator:
                     display_path, idx = future_to_item[future]
-                    source_path, is_valid, errors = future.result()
+                    source_path, is_valid, errors, item_id = future.result()
 
                     result = {
                         "path": source_path,
                         "valid_stac": is_valid,
+                        "item_id": item_id,
                     }
 
                     if errors:
