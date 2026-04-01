@@ -341,24 +341,6 @@ def fetch_schema_with_override(
 
 
 @functools.lru_cache(maxsize=128)
-def _get_cached_schema(schema_path: str, schema_json: str):
-    """
-    Cache parsed schemas to avoid re-parsing the same JSON schema multiple times.
-
-    This function is cached to avoid recompiling the same JSON schema multiple times.
-    The schema_json parameter is a JSON string representation of the schema to make it hashable.
-
-    Args:
-        schema_path (str): Path or URI of the JSON Schema.
-        schema_json (str): JSON string representation of the schema.
-
-    Returns:
-        dict: Parsed schema dictionary.
-    """
-    return json.loads(schema_json)
-
-
-@functools.lru_cache(maxsize=128)
 def _build_cached_validator(schema_json: str):
     """
     Build and cache a Draft202012Validator from a JSON schema string.
