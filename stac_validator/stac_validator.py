@@ -192,6 +192,7 @@ def recursive_validation_summary(message: List[Dict[str, Any]]) -> None:
 )
 @click.option(
     "--item-collection",
+    "--feature-collection",
     is_flag=True,
     help="Validate item collection response. Can be combined with --pages. Defaults to one page.",
 )
@@ -360,6 +361,7 @@ def main(
 )
 @click.option(
     "--item-collection",
+    "--feature-collection",
     is_flag=True,
     help="Treat files as ItemCollections and validate each item individually.",
 )

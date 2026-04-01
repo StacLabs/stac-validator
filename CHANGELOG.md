@@ -33,7 +33,7 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 - Implemented pre-warming of schema cache before forking worker processes via Copy-on-Write [#274](https://github.com/stac-utils/stac-validator/pull/274)
 
-- Renamed `--feature-collection` to `--item-collection` in `batch` command to match `validate` command interface [#274](https://github.com/stac-utils/stac-validator/pull/274)
+- Allow both `--feature-collection` and `--item-collection` in `batch` and `validate` command interface [#274](https://github.com/stac-utils/stac-validator/pull/274)
 
 - Updated batch command output format to match validate command, including all fields: version, path, schema, error_type, error_message, failed_schema, recommendation [#274](https://github.com/stac-utils/stac-validator/pull/274)
 
