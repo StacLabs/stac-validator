@@ -193,11 +193,23 @@ def _build_schema_cache(maxsize: int):
     return _cached_fetch
 
 
+def _build_validator_cache(maxsize: int):
+    @functools.lru_cache(maxsize=maxsize)
+    def _cached_validator(schema_json: str) -> Draft202012Validator:
+        schema = json.loads(schema_json)
+        return Draft202012Validator(schema)
+
+    return _cached_validator
+
+
 _schema_cache = _build_schema_cache(DEFAULT_SCHEMA_CACHE_SIZE)
+_validator_cache = _build_validator_cache(DEFAULT_SCHEMA_CACHE_SIZE)
 
 
 def set_schema_cache_size(maxsize: int) -> None:
     """Reconfigure the schema cache max size at runtime.
+
+    Controls both the fetch/parse cache and the compiled validator cache.
 
     Args:
         maxsize: Maximum number of cached schema entries. Use 0 to disable caching.
@@ -208,8 +220,9 @@ def set_schema_cache_size(maxsize: int) -> None:
     if maxsize < 0:
         raise ValueError("schema cache size must be greater than or equal to 0")
 
-    global _schema_cache
+    global _schema_cache, _validator_cache
     _schema_cache = _build_schema_cache(maxsize)
+    _validator_cache = _build_validator_cache(maxsize)
 
 
 def _fetch_and_parse_schema_cache_info():
@@ -417,13 +430,13 @@ def fetch_schema_with_override(
     return fetch_and_parse_schema(schema_path)
 
 
-@functools.lru_cache(maxsize=128)
-def _build_cached_validator(schema_json: str):
+def _build_cached_validator(schema_json: str) -> Draft202012Validator:
     """
     Build and cache a Draft202012Validator from a JSON schema string.
 
-    This function is cached to avoid recompiling the same JSON schema multiple times.
+    This function uses the dynamic validator cache configured via set_schema_cache_size().
     The expensive operation of building the validator's validation tree is cached here.
+    Uses a global lookup to respect runtime cache size changes.
 
     Args:
         schema_json (str): JSON string representation of the schema.
@@ -431,8 +444,8 @@ def _build_cached_validator(schema_json: str):
     Returns:
         Draft202012Validator: Compiled validator object.
     """
-    schema = json.loads(schema_json)
-    return Draft202012Validator(schema)
+    # Use global lookup to respect runtime cache size changes
+    return globals()['_validator_cache'](schema_json)
 
 
 def validate_with_ref_resolver(

@@ -153,7 +153,7 @@ Usage: stac-validator [OPTIONS] COMMAND [ARGS]...
   Usage:
     stac-validator validate <file> [options]
     stac-validator batch <files> [options]
-    stac-validator batch <file> --feature-collection [options]
+    stac-validator batch <file> --item-collection [options]
       
 
 Options:
@@ -247,7 +247,7 @@ Usage: stac-validator batch [OPTIONS] FILES...
       $ stac-validator batch file1.json file2.json file3.json
 
       # Validate a GeoJSON FeatureCollection (validates each feature individually)
-      $ stac-validator batch --feature-collection sample_data/sentinel-cogs_0_100.json
+      $ stac-validator batch --item-collection sample_data/sentinel-cogs_0_100.json
 
       # Use only 4 cores
       $ stac-validator batch *.json --cores 4
@@ -260,7 +260,7 @@ Options:
                         Defaults to all available cores.
   --no-progress         Disable progress bar during validation.
   --no-output           Do not print output to console.
-  --feature-collection  Treat files as GeoJSON FeatureCollections and validate
+  --item-collection  Treat files as GeoJSON FeatureCollections and validate
                         each feature individually.
   --verbose             Show full JSON output for all items. By default, only
                         invalid items are shown.
@@ -335,7 +335,7 @@ $ stac-validator batch *.json
 $ stac-validator batch item1.json item2.json item3.json
 
 # Validate a FeatureCollection (extracts and validates each feature)
-$ stac-validator batch collection.json --feature-collection
+$ stac-validator batch collection.json --item-collection
 ```
 
 **Options**
@@ -363,7 +363,7 @@ $ stac-validator batch *.json --schema-cache-size 0
 $ stac-validator batch *.json --batch-size 5000
 
 # Use larger batch size for faster processing (uses more memory)
-$ stac-validator batch collection.json --feature-collection --batch-size 10000
+$ stac-validator batch collection.json --item-collection --batch-size 10000
 
 # Use smaller batch size for memory-constrained environments
 $ stac-validator batch *.json --batch-size 500
@@ -391,7 +391,7 @@ The `--batch-size` option controls how many items are processed in each chunk. T
 **Example Output**
 
 ```bash
-$ stac-validator batch --feature-collection sample_data/sentinel-cogs_0_100.json
+$ stac-validator batch --item-collection sample_data/sentinel-cogs_0_100.json
 [
     {
         "path": "sample_data/sentinel-cogs_0_100.json[0]",

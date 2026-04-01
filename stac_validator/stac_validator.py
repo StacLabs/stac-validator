@@ -359,9 +359,9 @@ def main(
     help="Do not print output to console.",
 )
 @click.option(
-    "--feature-collection",
+    "--item-collection",
     is_flag=True,
-    help="Treat files as GeoJSON FeatureCollections and validate each feature individually.",
+    help="Treat files as ItemCollections and validate each item individually.",
 )
 @click.option(
     "--verbose",
@@ -376,7 +376,7 @@ def main(
 )
 @click.option(
     "--batch-size",
-    type=int,
+    type=click.IntRange(min=1),
     default=2000,
     help="Batch size for chunked processing. Larger batches use more memory but may be faster. Defaults to 2000.",
 )
@@ -385,7 +385,7 @@ def batch(
     cores: Optional[int],
     no_progress: bool,
     no_output: bool,
-    feature_collection: bool,
+    item_collection: bool,
     verbose: bool,
     schema_cache_size: int,
     batch_size: int,
@@ -433,7 +433,7 @@ def batch(
             list(files),
             max_workers=cores,
             show_progress=not no_progress,
-            feature_collection=feature_collection,
+            feature_collection=item_collection,
             batch_size=batch_size,
         )
 
@@ -454,9 +454,11 @@ def batch(
                 if not result.get("valid_stac", False):
                     # Try to get item ID from result, fallback to path
                     item_id = result.get("item_id", result.get("path", "unknown"))
+                    
+                    # Handle both old format (errors array) and new format (error_message/failed_schema)
                     if "errors" in result:
+                        # Old format: errors array with dict entries
                         for error in result["errors"]:
-                            # Handle both dict and string error formats
                             if isinstance(error, dict):
                                 error_msg = error.get("message", str(error))
                                 error_schema = error.get("schema", "")
@@ -464,6 +466,12 @@ def batch(
                             else:
                                 error_key = (str(error), "")
                             error_groups[error_key].append(item_id)
+                    elif "error_message" in result:
+                        # New format: error_message and failed_schema fields
+                        error_msg = result.get("error_message", "")
+                        error_schema = result.get("failed_schema", "")
+                        error_key = (error_msg, error_schema)
+                        error_groups[error_key].append(item_id)
 
             # Print grouped errors with compact formatting
             for idx, ((error_msg, error_schema), item_ids) in enumerate(

@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## Unreleased
+## [Unreleased]
 
 ### Added
 
@@ -32,6 +32,20 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - Implemented direct dictionary passing to worker processes via pickle instead of temp file I/O [#274](https://github.com/stac-utils/stac-validator/pull/274)
 
 - Implemented pre-warming of schema cache before forking worker processes via Copy-on-Write [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Renamed `--feature-collection` to `--item-collection` in `batch` command to match `validate` command interface [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Updated batch command output format to match validate command, including all fields: version, path, schema, error_type, error_message, failed_schema, recommendation [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Unified validator cache control with `--schema-cache-size` option to control both fetch/parse and compiled validator caching [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Added input validation for `--batch-size` option (minimum value: 1) [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+### Fixed
+
+- Fixed batch command error grouping to work with new validation message format [#274](https://github.com/stac-utils/stac-validator/pull/274)
+
+- Fixed validator cache to respect runtime `--schema-cache-size` changes via dynamic cache builder [#274](https://github.com/stac-utils/stac-validator/pull/274)
 
 ## [v4.0.1] - 2026-03-31
 

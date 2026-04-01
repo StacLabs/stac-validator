@@ -163,7 +163,7 @@ def _validate_single_file(file_path: str) -> Tuple[str, bool, List[str]]:
 
 def _validate_dict(
     item_dict: Dict[str, Any], source_path: str
-) -> Tuple[str, bool, List[Dict[str, str]], str]:
+) -> Tuple[str, bool, Dict[str, Any], str]:
     """
     Worker function that validates a STAC item dictionary directly (no temp files).
 
@@ -175,11 +175,11 @@ def _validate_dict(
         source_path: Display path for result reporting (e.g., "file.json[0]").
 
     Returns:
-        Tuple of (source_path, is_valid, list_of_error_dicts, item_id)
-        where error_dicts contain 'message' and 'schema' keys
+        Tuple of (source_path, is_valid, message_dict, item_id)
+        where message_dict is the complete validation result from StacValidate
     """
-    errors = []
     item_id = item_dict.get("id", "unknown")
+    message = {}
 
     try:
         # Validate the dictionary directly without writing to disk
@@ -193,57 +193,29 @@ def _validate_dict(
         # Run validation on the dictionary
         validator.validate_dict(item_dict)
 
-        # Collect errors from validation
+        # Get the validation result message
         if validator.message:
-            try:
-                messages = validator.message
-                if isinstance(messages, list) and len(messages) > 0:
-                    msg_obj = messages[0]
-                    if not msg_obj.get("valid_stac", False):
-                        # Extract schema information - prefer failed_schema, then schema field
-                        failed_schema = msg_obj.get("failed_schema", "")
-                        if not failed_schema:
-                            # Try to get from schema field (list of schemas checked)
-                            schema_list = msg_obj.get("schema", [])
-                            # Use the last schema in the list (most likely the one that failed)
-                            failed_schema = schema_list[-1] if schema_list else ""
-
-                        # Try multiple error field names
-                        if "errors" in msg_obj:
-                            for error_msg in msg_obj["errors"]:
-                                errors.append(
-                                    {"message": error_msg, "schema": failed_schema}
-                                )
-                        elif "error_message" in msg_obj:
-                            errors.append(
-                                {
-                                    "message": msg_obj["error_message"],
-                                    "schema": failed_schema,
-                                }
-                            )
-                        else:
-                            errors.append(
-                                {
-                                    "message": f"{msg_obj.get('error_type', 'ValidationError')}",
-                                    "schema": failed_schema,
-                                }
-                            )
-            except (KeyError, IndexError, TypeError):
-                # If we can't parse, just use the raw message
-                if validator.message:
-                    errors.append({"message": str(validator.message), "schema": ""})
+            messages = validator.message
+            if isinstance(messages, list) and len(messages) > 0:
+                message = messages[0]
+            else:
+                message = messages if isinstance(messages, dict) else {}
+            
+            # Set path to the display path (not a real file)
+            message["path"] = source_path
 
     except Exception as e:
         # Catch any exception during validation
-        return (
-            source_path,
-            False,
-            [{"message": f"Critical error processing item: {str(e)}", "schema": ""}],
-            item_id,
-        )
+        message = {
+            "path": source_path,
+            "valid_stac": False,
+            "error_type": "Exception",
+            "error_message": f"Critical error processing item: {str(e)}",
+            "failed_schema": "",
+        }
 
-    is_valid = len(errors) == 0
-    return source_path, is_valid, errors, item_id
+    is_valid = message.get("valid_stac", False)
+    return source_path, is_valid, message, item_id
 
 
 def validate_concurrently(
@@ -498,16 +470,19 @@ def validate_dicts(
                 # Collect results for this chunk as they finish
                 for future in concurrent.futures.as_completed(future_to_item):
                     display_path, idx = future_to_item[future]
-                    source_path, is_valid, errors, item_id = future.result()
+                    source_path, is_valid, message, item_id = future.result()
 
-                    result = {
-                        "path": source_path,
-                        "valid_stac": is_valid,
-                        "item_id": item_id,
-                    }
-
-                    if errors:
-                        result["errors"] = errors
+                    # Use the complete message from validation
+                    result = message.copy() if message else {}
+                    
+                    # Ensure required fields are present
+                    if "path" not in result:
+                        result["path"] = source_path
+                    if "valid_stac" not in result:
+                        result["valid_stac"] = is_valid
+                    
+                    # Add item_id for reference
+                    result["item_id"] = item_id
 
                     all_results.append(result)
 
