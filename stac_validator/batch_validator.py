@@ -200,7 +200,7 @@ def _validate_dict(
                 message = messages[0]
             else:
                 message = messages if isinstance(messages, dict) else {}
-            
+
             # Set path to the display path (not a real file)
             message["path"] = source_path
 
@@ -474,13 +474,13 @@ def validate_dicts(
 
                     # Use the complete message from validation
                     result = message.copy() if message else {}
-                    
+
                     # Ensure required fields are present
                     if "path" not in result:
                         result["path"] = source_path
                     if "valid_stac" not in result:
                         result["valid_stac"] = is_valid
-                    
+
                     # Add item_id for reference
                     result["item_id"] = item_id
 

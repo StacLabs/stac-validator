@@ -454,7 +454,7 @@ def batch(
                 if not result.get("valid_stac", False):
                     # Try to get item ID from result, fallback to path
                     item_id = result.get("item_id", result.get("path", "unknown"))
-                    
+
                     # Handle both old format (errors array) and new format (error_message/failed_schema)
                     if "errors" in result:
                         # Old format: errors array with dict entries

@@ -3,7 +3,7 @@
 Benchmark script comparing batch validation vs legacy item-collection validation.
 
 Compares:
-1. stac-validator batch --feature-collection (multiprocessing)
+1. stac-validator batch --item-collection (multiprocessing)
 2. stac-validator validate --item-collection (single-threaded legacy)
 
 Usage:
@@ -100,10 +100,10 @@ def generate_test_feature_collection(num_items: int = 10000) -> str:
 
 def run_batch_validation(file_path: str, batch_size: int = 2000) -> dict:
     """
-    Run batch validation with --feature-collection.
+    Run batch validation with --item-collection.
     """
     print("\n" + "=" * 70)
-    print("BENCHMARK 1: stac-validator batch --feature-collection")
+    print("BENCHMARK 1: stac-validator batch --item-collection")
     print("=" * 70)
 
     start_time = time.time()
@@ -113,7 +113,7 @@ def run_batch_validation(file_path: str, batch_size: int = 2000) -> dict:
         [
             "stac-validator",
             "batch",
-            "--feature-collection",
+            "--item-collection",
             "--batch-size",
             str(batch_size),
             file_path,
@@ -152,7 +152,7 @@ def run_batch_validation(file_path: str, batch_size: int = 2000) -> dict:
                 pass
 
     return {
-        "method": "batch --feature-collection",
+        "method": "batch --item-collection",
         "elapsed": elapsed,
         "exit_code": process.returncode,
         "output": "",

@@ -445,7 +445,7 @@ def _build_cached_validator(schema_json: str) -> Draft202012Validator:
         Draft202012Validator: Compiled validator object.
     """
     # Use global lookup to respect runtime cache size changes
-    return globals()['_validator_cache'](schema_json)
+    return globals()["_validator_cache"](schema_json)
 
 
 def validate_with_ref_resolver(
