@@ -444,20 +444,32 @@ def validate_dicts(
     # This leverages Copy-on-Write so all workers inherit the warmed cache
     _warm_schema_cache(stac_version=stac_version)
 
-    # Process items in bounded chunks to protect memory
-    for chunk in _chunked_iterable(items_list, chunk_size):
-        chunk_list = list(chunk)
-        if not chunk_list:
-            continue
+    # Create a single executor for the entire run to reuse workers across chunks
+    # This preserves the schema cache across chunks and eliminates fork/spawn overhead
+    try:
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=optimal_workers
+        ) as executor:
+            total_items = len(items_list)
+            progress_bar = None
 
-        try:
-            with concurrent.futures.ProcessPoolExecutor(
-                max_workers=optimal_workers
-            ) as executor:
-                # Submit all items in chunk to the pool
-                # Pass dictionaries directly via pickle (no temp files)
+            # Initialize progress bar if available
+            if show_progress and has_tqdm:
+                progress_bar = tqdm(  # type: ignore
+                    total=total_items,
+                    desc="Validating Items",
+                    unit="item",
+                )
+
+            # Process items in chunks: submit a chunk, collect results, then submit next
+            # This bounds in-flight futures and memory usage while reusing workers
+            for chunk in _chunked_iterable(items_list, chunk_size):
+                if not chunk:
+                    continue
+
+                # Submit all items in this chunk
                 future_to_item = {}
-                for idx, item in enumerate(chunk_list):
+                for idx, item in enumerate(chunk):
                     # Extract source metadata if present
                     source_file = item.get("__source_file__")
                     feature_index = item.get("__feature_index__")
@@ -483,18 +495,8 @@ def validate_dicts(
                     future = executor.submit(_validate_dict, payload, display_path)
                     future_to_item[future] = (display_path, idx)
 
-                # Wrap iterator with tqdm for progress bar
-                iterator = concurrent.futures.as_completed(future_to_item)
-                if show_progress and has_tqdm:
-                    iterator = tqdm(  # type: ignore
-                        iterator,
-                        total=len(chunk_list),
-                        desc="Validating Items",
-                        unit="item",
-                    )
-
-                # Collect results as they finish
-                for future in iterator:
+                # Collect results for this chunk as they finish
+                for future in concurrent.futures.as_completed(future_to_item):
                     display_path, idx = future_to_item[future]
                     source_path, is_valid, errors, item_id = future.result()
 
@@ -509,27 +511,35 @@ def validate_dicts(
 
                     all_results.append(result)
 
-        except Exception as e:
-            # If chunk processing fails, record error for all items in chunk
-            for idx, item in enumerate(chunk_list):
-                source_file = item.get("__source_file__")
-                feature_index = item.get("__feature_index__")
+                    # Update progress bar
+                    if progress_bar:
+                        progress_bar.update(1)
 
-                if source_file is not None:
-                    display_path = (
-                        f"{source_file}[{feature_index}]"
-                        if feature_index is not None
-                        else source_file
-                    )
-                else:
-                    display_path = f"item-{idx}"
+            # Close progress bar
+            if progress_bar:
+                progress_bar.close()
 
-                all_results.append(
-                    {
-                        "path": display_path,
-                        "valid_stac": False,
-                        "errors": [f"Chunk processing error: {str(e)}"],
-                    }
+    except Exception as e:
+        # If processing fails, record error for all items
+        for idx, item in enumerate(items_list):
+            source_file = item.get("__source_file__")
+            feature_index = item.get("__feature_index__")
+
+            if source_file is not None:
+                display_path = (
+                    f"{source_file}[{feature_index}]"
+                    if feature_index is not None
+                    else source_file
                 )
+            else:
+                display_path = f"item-{idx}"
+
+            all_results.append(
+                {
+                    "path": display_path,
+                    "valid_stac": False,
+                    "errors": [f"Chunk processing error: {str(e)}"],
+                }
+            )
 
     return all_results
