@@ -1,5 +1,7 @@
 import json
+
 import pytest
+
 from stac_validator.fast_validator import FastValidator
 
 
@@ -14,7 +16,7 @@ def valid_item(tmp_path):
         "geometry": None,
         "properties": {"datetime": "2023-01-01T00:00:00Z"},
         "links": [{"rel": "self", "href": "http://example.com"}],
-        "assets": {}
+        "assets": {},
     }
     item_path.write_text(json.dumps(item_data))
     return str(item_path)
@@ -32,9 +34,9 @@ def valid_collection(tmp_path):
         "license": "MIT",
         "extent": {
             "spatial": {"bbox": [[-180, -90, 180, 90]]},
-            "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]}
+            "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
         },
-        "links": []
+        "links": [],
     }
     coll_path.write_text(json.dumps(coll_data))
     return str(coll_path)
@@ -49,7 +51,7 @@ def valid_catalog(tmp_path):
         "type": "Catalog",
         "id": "test-catalog",
         "description": "Test catalog",
-        "links": []
+        "links": [],
     }
     cat_path.write_text(json.dumps(cat_data))
     return str(cat_path)
@@ -69,10 +71,10 @@ def valid_feature_collection(tmp_path):
                 "geometry": None,
                 "properties": {"datetime": "2023-01-01T00:00:00Z"},
                 "links": [{"rel": "self", "href": "http://example.com"}],
-                "assets": {}
+                "assets": {},
             }
             for i in range(5)
-        ]
+        ],
     }
     fc_path.write_text(json.dumps(fc_data))
     return str(fc_path)
@@ -88,7 +90,7 @@ def invalid_item(tmp_path):
         "geometry": None,
         "properties": {"datetime": "2023-01-01T00:00:00Z"},
         "links": [],
-        "assets": {}
+        "assets": {},
     }
     item_path.write_text(json.dumps(item_data))
     return str(item_path)
@@ -108,7 +110,7 @@ def invalid_feature_collection(tmp_path):
                 "geometry": None,
                 "properties": {"datetime": "2023-01-01T00:00:00Z"},
                 "links": [{"rel": "self", "href": "http://example.com"}],
-                "assets": {}
+                "assets": {},
             },
             {
                 "stac_version": "1.0.0",
@@ -116,9 +118,9 @@ def invalid_feature_collection(tmp_path):
                 "geometry": None,
                 "properties": {"datetime": "2023-01-01T00:00:00Z"},
                 "links": [],
-                "assets": {}
-            }
-        ]
+                "assets": {},
+            },
+        ],
     }
     fc_path.write_text(json.dumps(fc_data))
     return str(fc_path)
@@ -195,13 +197,13 @@ class TestFastValidatorOptions:
                     "geometry": None,
                     "properties": {"datetime": "2023-01-01T00:00:00Z"},
                     "links": [{"rel": "self", "href": "http://example.com"}],
-                    "assets": {}
+                    "assets": {},
                 }
                 for i in range(20)
-            ]
+            ],
         }
         fc_path.write_text(json.dumps(fc_data))
-        
+
         fv = FastValidator(str(fc_path), quiet=False, verbose=False)
         fv.run()
         captured = capsys.readouterr()
@@ -292,10 +294,10 @@ class TestFastValidatorPerformance:
                     "geometry": None,
                     "properties": {"datetime": "2023-01-01T00:00:00Z"},
                     "links": [{"rel": "self", "href": "http://example.com"}],
-                    "assets": {}
+                    "assets": {},
                 }
                 for i in range(100)
-            ]
+            ],
         }
         fc_path.write_text(json.dumps(fc_data))
 
