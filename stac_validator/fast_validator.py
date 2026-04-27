@@ -7,7 +7,7 @@ import urllib.request
 from typing import Any, Dict, List
 
 import click
-import fastjsonschema
+import fastjsonschema  # type: ignore
 
 # --- Caches & Config ---
 SCHEMA_CACHE: Dict[str, Any] = {}
