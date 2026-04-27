@@ -6,9 +6,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import click  # type: ignore
 
 from .batch_validator import validate_concurrently
+from .fast_validator import FastValidator
 from .utilities import set_schema_cache_size
 from .validate import StacValidate
-from .fast_validator import FastValidator
 
 
 def _print_summary(
