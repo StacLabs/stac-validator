@@ -26,7 +26,7 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
   - **Dynamic Multi-Level Caching:** Implements RAM -> Disk -> Network fetch hierarchy for JSON schemas.
   - **Robust Fallback:** Automated fallback to standard `jsonschema` for complex schemas that fail to compile under `fastjsonschema` (e.g., Item Assets extension).
   - **Intelligent Output:** New summary report including execution metrics (setup time vs. execution time) and consolidated error breakdowns.
-  - Added `--verbose` (`-v`) and `--quiet` (`-q`) support to the `fast` command for configurable output density.
+  - Added `--verbose` (`-v`) and `--quiet` (`-q`) support to the `fast` command for configurable output density. [#276](https://github.com/stac-utils/stac-validator/pull/276)
 
 ## [v4.1.0] - 2026-04-01
 
