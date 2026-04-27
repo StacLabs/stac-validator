@@ -562,6 +562,37 @@ Average Exec per Object : 0.257 ms
 - **🐌 (Slow):** First validation - schemas being fetched and compiled
 - **⚡ (Lightning):** Cached validator - instant execution using pre-compiled validator
 
+**Schema Caching & Performance Improvement**
+
+The fast validator uses a multi-tier caching strategy that dramatically speeds up subsequent runs:
+
+1. **First Run:** Schemas are downloaded from the network and compiled with `fastjsonschema`
+   - Setup time: 5-6 seconds (includes network fetch for all schemas + compilation)
+   - Per-item execution: 0.25ms
+   - Total for 100 items: ~5.4 seconds
+   - Total for 1000 items: ~10-11 seconds
+
+2. **Subsequent Runs:** Schemas are loaded from local disk cache (`.schemas/` directory)
+   - Setup time: 100-200ms (instant disk read + compilation from cache)
+   - Per-item execution: 0.25ms
+   - Total for 100 items: ~150-200ms
+   - Total for 1000 items: ~400-500ms (0.4-0.5 seconds)
+   - **Speedup: 20-25x faster** compared to first run
+
+**Cache Storage:**
+
+Schemas are automatically cached in `local_schemas/.schemas/` directory:
+```
+local_schemas/
+└── .schemas/
+```
+
+This means:
+- ✅ No network calls on subsequent validations
+- ✅ Instant schema availability across multiple runs
+- ✅ Persistent cache survives process restarts
+- ✅ Minimal disk space usage (schemas are typically <100KB each)
+
 **Performance Characteristics**
 
 The fast validator is optimized for:
@@ -570,17 +601,17 @@ The fast validator is optimized for:
 - Rapid iteration during development
 - CI/CD pipelines where speed and memory efficiency are critical
 
-Typical performance (comparable to batch command):
-- **Setup time:** 100-200ms (first file, includes schema download/compilation)
-- **Per-item execution:** 0.2-0.5ms (compiled fastjsonschema validator)
-- **Total time for 1000 items:** ~1-2 seconds
+Typical performance (subsequent runs with disk cache):
+- **Setup time:** 100-200ms (disk read + compilation from cached schemas)
+- **Per-item execution:** 0.23-0.25ms (compiled fastjsonschema validator)
+- **Total time for 100 items:** ~150-200ms
+- **Total time for 1000 items:** ~400-500ms (0.4-0.5 seconds)
 - **Memory footprint:** Single process, minimal overhead (vs. batch's multiprocessing overhead)
 
 **Batch vs. Fast Comparison**
 
 | Metric | Batch | Fast |
 |--------|-------|------|
-| Speed | ~0.5-1ms per item | ~0.2-0.5ms per item |
 | Memory | High (multiprocessing) | Low (single-threaded) |
 | CPU cores | All available | Single core |
 | Best for | Large systems with many cores | Memory-constrained or single-core systems |
