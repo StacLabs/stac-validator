@@ -16,14 +16,24 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ### Updated
 
+## [v4.2.0] - 2026-04-27
+
+### Added
+
+- **High-Speed Validation Engine:** Added new `stac-validator fast` command for ultra-high performance validation using `fastjsonschema`.
+  - Up to 50x faster execution per object compared to standard `jsonschema` validation.
+  - **Persistent Schema Caching:** Local disk-based schema cache in `local_schemas/.schemas` to support offline validation and eliminate network latency.
+  - **Dynamic Multi-Level Caching:** Implements RAM -> Disk -> Network fetch hierarchy for JSON schemas.
+  - **Robust Fallback:** Automated fallback to standard `jsonschema` for complex schemas that fail to compile under `fastjsonschema` (e.g., Item Assets extension).
+  - **Intelligent Output:** New summary report including execution metrics (setup time vs. execution time) and consolidated error breakdowns.
+  - Added `--verbose` (`-v`) and `--quiet` (`-q`) support to the `fast` command for configurable output density.
+
 ## [v4.1.0] - 2026-04-01
 
 ### Added
 
 - Added benchmark_validation.py script for comparing batch vs legacy validation performance [#274](https://github.com/stac-utils/stac-validator/pull/274)
-
 - Added `--batch-size` option to `batch` command for configurable chunk processing (default: 2000) [#274](https://github.com/stac-utils/stac-validator/pull/274)
-
 
 ### Changed
 
@@ -413,7 +423,8 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - With the newest version - 1.0.0-beta.2 - items will run through jsonchema validation before the PySTAC validation. The reason for this is that jsonschema will give more informative error messages. This should be addressed better in the future. This is not the case with the --recursive option as time can be a concern here with larger collections.
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
-[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.1.0..main
+[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.2.0..main
+[v4.2.0]: https://github.com/sparkgeo/stac-validator/compare/v4.1.0..v4.2.0
 [v4.1.0]: https://github.com/sparkgeo/stac-validator/compare/v4.0.1..v4.1.0
 [v4.0.1]: https://github.com/sparkgeo/stac-validator/compare/v4.0.0..v4.0.1
 [v4.0.0]: https://github.com/sparkgeo/stac-validator/compare/v3.11.0..v4.0.0

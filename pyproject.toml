@@ -3,12 +3,11 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "stac_validator"
-version = "4.1.0"
+name = "stac_valid"
+version = "4.2.0"
 description = "A package to validate STAC files"
 authors = [
-    {name = "James Banting"},
-    {name = "Jonathan Healy", email = "jonathan.d.healy@gmail.com"}
+    {name = "Jonathan Healy", email = "jon@healy-hyperspatial.dev"}
 ]
 license = {text = "Apache-2.0"}
 classifiers = [
@@ -29,7 +28,9 @@ dependencies = [
     "pyYAML>=6.0.1",
     "tqdm>=4.66.0",
 ]
-optional-dependencies.dev = [
+
+[project.optional-dependencies]
+dev = [
     "black",
     "pytest",
     "pytest-mypy",
@@ -43,7 +44,7 @@ optional-dependencies.dev = [
     "types-jsonschema",
     "types-tqdm"
 ]
-optional-dependencies.pydantic = [
+pydantic = [
     "stac-pydantic>=3.3.0"
 ]
 
@@ -60,6 +61,7 @@ packages = ["stac_validator"]
 
 [project.scripts]
 stac-validator = "stac_validator.stac_validator:cli"
+stac-valid = "stac_validator.stac_validator:cli"
 
 [tool.setuptools.package-data]
 stac_validator = ["*.yaml"]
