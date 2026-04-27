@@ -20,7 +20,7 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ### Added
 
-- Deprecation warning for `stac-validator` command, directing users to use `stac-valid` instead [#278](https://github.com/stac-utils/stac-validator/pull/278)
+- Deprecation warning for `stac-validator` command, directing users to use `stac-valid` instead [#290](https://github.com/stac-utils/stac-validator/pull/290)
 
 ## [v4.2.0] - 2026-04-27
 

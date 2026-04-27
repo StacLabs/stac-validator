@@ -5,4 +5,4 @@ warnings.warn(
     "Please update your requirements to use: pip install stac-valid",
     DeprecationWarning,
     stacklevel=2,
-    )
+)
