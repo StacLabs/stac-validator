@@ -8,6 +8,7 @@ import click  # type: ignore
 from .batch_validator import validate_concurrently
 from .utilities import set_schema_cache_size
 from .validate import StacValidate
+from .fast_validator import FastValidator
 
 
 def _print_summary(
@@ -524,6 +525,21 @@ def batch(
         sys.exit(1)
 
 
+@click.command()
+@click.argument("stac_file")
+@click.option(
+    "--quiet",
+    "-q",
+    is_flag=True,
+    help="Suppress individual item logs.",
+)
+def fast(stac_file: str, quiet: bool):
+    """High-speed validation using fastjsonschema and local caching."""
+    fv = FastValidator(stac_file, quiet=quiet)
+    fv.run()
+    sys.exit(0 if fv.valid else 1)
+
+
 @click.group()
 def cli():
     """STAC Validator - Validate STAC files against the STAC specification.
@@ -533,6 +549,7 @@ def cli():
       stac-validator validate <file> [options]
       stac-validator batch <files> [options]
       stac-validator batch <file> --feature-collection [options]
+      stac-validator fast <file> [options]
     """
     pass
 
@@ -540,6 +557,7 @@ def cli():
 # Register commands
 cli.add_command(main, name="validate")
 cli.add_command(batch, name="batch")
+cli.add_command(fast, name="fast")
 
 
 if __name__ == "__main__":
