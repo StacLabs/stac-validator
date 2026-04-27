@@ -117,3 +117,6 @@ cdk-deployment/lambda/stac_validator/
 cdk-deployment/build-libraries/libraries.zip
 
 Pipfile*
+
+# local schemas
+*.schemas
