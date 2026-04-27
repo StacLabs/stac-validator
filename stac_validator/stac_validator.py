@@ -10,6 +10,14 @@ from .fast_validator import FastValidator
 from .utilities import set_schema_cache_size
 from .validate import StacValidate
 
+if sys.argv and "stac-validator" in sys.argv[0]:
+    click.secho(
+        "⚠️ NOTICE: For v4.2.0+, the PyPI package has moved. "
+        "Please update your environments using: pip install stac-valid\n",
+        fg="yellow",
+        err=True,
+    )
+
 
 def _print_summary(
     title: str, valid_count: int, total_count: int, obj_type: str = "STAC objects"
@@ -561,7 +569,13 @@ def cli():
       stac-validator batch <file> --feature-collection [options]
       stac-validator fast <file> [options]
     """
-    pass
+    if "stac-validator" in sys.argv[0]:
+        click.secho(
+            "⚠️ NOTICE: For v4.2.0+, the PyPI package has moved. "
+            "Please update your environments using: pip install stac-valid\n",
+            fg="yellow",
+            err=True,
+        )
 
 
 # Register commands
