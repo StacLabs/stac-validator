@@ -537,13 +537,17 @@ def batch(
     "--verbose",
     "-v",
     is_flag=True,
-    help="Show full validation logs for all items. By default, only invalid items are shown.",
+    help="Show full validation logs for all items. By default, a limited sample of item logs is shown.",
 )
 def fast(stac_file: str, quiet: bool, verbose: bool):
     """High-speed validation using fastjsonschema and local caching."""
-    fv = FastValidator(stac_file, quiet=quiet, verbose=verbose)
-    fv.run()
-    sys.exit(0 if fv.valid else 1)
+    try:
+        fv = FastValidator(stac_file, quiet=quiet, verbose=verbose)
+        fv.run()
+        sys.exit(0 if fv.valid else 1)
+    except RuntimeError as e:
+        click.secho(f"\n🚨 FATAL ERROR: {e}", fg="red", bold=True)
+        sys.exit(1)
 
 
 @click.group()

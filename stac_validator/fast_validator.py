@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 import time
 import urllib.error
 import urllib.request
@@ -12,6 +11,7 @@ import fastjsonschema  # type: ignore
 # --- Caches & Config ---
 SCHEMA_CACHE: Dict[str, Any] = {}
 VALIDATOR_CACHE: Dict[Any, Any] = {}
+QUIET_MODE: bool = False
 # Store cached schemas inside the repository under local_schemas/.schemas (project-root relative)
 LOCAL_SCHEMA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -46,17 +46,14 @@ def fetch_schema(uri: str) -> Dict[str, Any]:
             pass  # If corrupted, fallback to network
 
     # 3. Network Fetch
-    click.secho(f"    [Network] Fetching: {uri}", fg="yellow", dim=True)
+    if not QUIET_MODE:
+        click.secho(f"    [Network] Fetching: {uri}", fg="yellow", dim=True)
     req = urllib.request.Request(uri, headers={"User-Agent": "stac-fast-cli/5.0"})
     try:
         with urllib.request.urlopen(req) as response:
             schema_dict = json.loads(response.read().decode("utf-8"))
     except urllib.error.URLError as e:
-        click.secho(
-            f"\n🚨 FATAL ERROR: Could not resolve schema: {uri}", fg="red", bold=True
-        )
-        click.secho(f"Reason: {e}", fg="red")
-        sys.exit(1)
+        raise RuntimeError(f"Could not resolve schema: {uri}. Reason: {e}")
 
     # 4. Save to Disk Cache
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
@@ -130,14 +127,17 @@ def get_validator(stac_type: str, stac_version: str, extensions: List[str]):
 
 class FastValidator:
     def __init__(self, stac_file: str, quiet: bool = False, verbose: bool = False):
+        global QUIET_MODE
         self.stac_file = stac_file
         self.quiet = quiet
         self.valid = True
         self.verbose = verbose
+        QUIET_MODE = quiet
 
     def run(self):
         """Universal high-speed STAC Validator (Items, Collections, Catalogs, FeatureCollections)"""
-        click.secho(f"\n📂 Loading: {self.stac_file}", fg="blue", bold=True)
+        if not self.quiet:
+            click.secho(f"\n📂 Loading: {self.stac_file}", fg="blue", bold=True)
 
         try:
             if self.stac_file.startswith("http"):
@@ -160,25 +160,36 @@ class FastValidator:
 
         if obj_type == "FeatureCollection":
             items_to_validate = data.get("features", [])
-            click.secho(
-                f"📦 Detected FeatureCollection ({len(items_to_validate)} Items)\n",
-                fg="cyan",
-            )
+            if not self.quiet:
+                click.secho(
+                    f"📦 Detected FeatureCollection ({len(items_to_validate)} Items)\n",
+                    fg="cyan",
+                )
         elif obj_type == "Feature":
             items_to_validate = [data]
-            click.secho("📄 Detected: STAC Item\n", fg="cyan")
+            if not self.quiet:
+                click.secho("📄 Detected: STAC Item\n", fg="cyan")
         elif obj_type == "Collection":
             items_to_validate = [data]
-            click.secho("📚 Detected: STAC Collection\n", fg="cyan")
+            if not self.quiet:
+                click.secho("📚 Detected: STAC Collection\n", fg="cyan")
         elif obj_type == "Catalog" or ("id" in data and "description" in data):
             # Fallback for old catalogs missing the 'type' field
             data["type"] = "Catalog"
             items_to_validate = [data]
-            click.secho("🗂️  Detected: STAC Catalog\n", fg="cyan")
+            if not self.quiet:
+                click.secho("🗂️  Detected: STAC Catalog\n", fg="cyan")
         else:
-            click.secho(
-                "❌ Unknown JSON type. Missing 'type' field.", fg="red", bold=True
-            )
+            if "type" in data:
+                click.secho(
+                    f"❌ Unknown JSON type. Unsupported 'type' value: {obj_type!r}.",
+                    fg="red",
+                    bold=True,
+                )
+            else:
+                click.secho(
+                    "❌ Unknown JSON type. Missing 'type' field.", fg="red", bold=True
+                )
             self.valid = False
             return
 

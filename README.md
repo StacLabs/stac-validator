@@ -277,7 +277,7 @@ Options:
 **Fast Command**  
 
 ```bash
-$ stac-validator fast --help
+$ stac-valid fast --help
 ```
 
 ```bash
