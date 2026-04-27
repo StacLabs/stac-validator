@@ -533,9 +533,15 @@ def batch(
     is_flag=True,
     help="Suppress individual item logs.",
 )
-def fast(stac_file: str, quiet: bool):
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Show full validation logs for all items. By default, only invalid items are shown.",
+)
+def fast(stac_file: str, quiet: bool, verbose: bool):
     """High-speed validation using fastjsonschema and local caching."""
-    fv = FastValidator(stac_file, quiet=quiet)
+    fv = FastValidator(stac_file, quiet=quiet, verbose=verbose)
     fv.run()
     sys.exit(0 if fv.valid else 1)
 

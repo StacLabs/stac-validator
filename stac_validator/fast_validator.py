@@ -127,10 +127,11 @@ def get_validator(stac_type: str, stac_version: str, extensions: List[str]):
 
 
 class FastValidator:
-    def __init__(self, stac_file: str, quiet: bool = False):
+    def __init__(self, stac_file: str, quiet: bool = False, verbose: bool = False):
         self.stac_file = stac_file
         self.quiet = quiet
         self.valid = True
+        self.verbose = verbose
 
     def run(self):
         """Universal high-speed STAC Validator (Items, Collections, Catalogs, FeatureCollections)"""
@@ -247,7 +248,7 @@ class FastValidator:
                 status_text = click.style(f"❌ INVALID", fg="red")
 
             if not self.quiet:
-                if index < 5 or (len(items_to_validate) < 20):
+                if self.verbose or index < 5 or (len(items_to_validate) < 20):
                     cache_icon = "⚡" if is_cached else "🐌"
                     click.echo(
                         f"[{index + 1}] ID: {item_id} | Type: {actual_type} | Cache {cache_icon} | Setup: {setup_time:>6.2f}ms | Exec: {exec_time:>5.2f}ms | {status_text}"
