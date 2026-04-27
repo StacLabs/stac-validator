@@ -7,13 +7,11 @@ import urllib.request
 from typing import Any, Dict, List
 
 import click
-import fastjsonschema  # type: ignore
-
-from .utilities import get_stac_type
+import fastjsonschema
 
 # --- Caches & Config ---
 SCHEMA_CACHE: Dict[str, Any] = {}
-VALIDATOR_CACHE: Dict[str, Any] = {}
+VALIDATOR_CACHE: Dict[Any, Any] = {}
 # Store cached schemas inside the repository under local_schemas/.schemas (project-root relative)
 LOCAL_SCHEMA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -92,13 +90,13 @@ def get_validator(stac_type: str, stac_version: str, extensions: List[str]):
     else:
         raise ValueError(f"Unknown STAC type for validation: {stac_type}")
 
-    # Build the dynamic compound schema
+    schema_fragments: List[Dict[str, str]] = [{"$ref": base_uri}]
+    for ext in extensions:
+        schema_fragments.append({"$ref": ext})
     dynamic_schema = {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "allOf": [{"$ref": base_uri}],
+        "allOf": schema_fragments,
     }
-    for ext in extensions:
-        dynamic_schema["allOf"].append({"$ref": ext})
 
     try:
         validator = fastjsonschema.compile(
@@ -107,19 +105,23 @@ def get_validator(stac_type: str, stac_version: str, extensions: List[str]):
     except Exception:
         # FALLBACK: Some schemas (like Item Assets) cause fastjsonschema to generate invalid python code.
         # We fall back to the standard jsonschema library.
-        click.secho(f"    [Fallback] fastjsonschema compile failed. Using python-jsonschema.", fg="yellow", dim=True)
+        click.secho(
+            "    [Fallback] fastjsonschema compile failed. Using python-jsonschema.",
+            fg="yellow",
+            dim=True,
+        )
         import jsonschema
-        
+
         # Create a validator using the same custom logic
         def fallback_validator(data):
             # We need a resolver to handle the remote $refs
             resolver = jsonschema.RefResolver(
                 base_uri="",
                 referrer=dynamic_schema,
-                handlers={'http': fetch_schema, 'https': fetch_schema}
+                handlers={"http": fetch_schema, "https": fetch_schema},
             )
             jsonschema.validate(data, dynamic_schema, resolver=resolver)
-            
+
         validator = fallback_validator
 
     VALIDATOR_CACHE[cache_key] = validator
@@ -245,7 +247,7 @@ class FastValidator:
                 if error_msg not in error_registry:
                     error_registry[error_msg] = []
                 error_registry[error_msg].append(item_id)
-                status_text = click.style(f"❌ INVALID", fg="red")
+                status_text = click.style("❌ INVALID", fg="red")
 
             if not self.quiet:
                 if self.verbose or index < 5 or (len(items_to_validate) < 20):
