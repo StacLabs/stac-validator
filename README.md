@@ -13,6 +13,27 @@
    [![PyPI version](https://img.shields.io/pypi/v/stac-validator.svg?color=blue)](https://pypi.org/project/stac-validator/)
   [![STAC](https://img.shields.io/badge/STAC-1.1.0-blue.svg)](https://github.com/radiantearth/stac-spec/tree/v1.1.0)
 
+
+
+> ⚠️ **IMPORTANT NOTICE: PyPI Package Renamed** ⚠️
+>
+> Due to an administrative transition, the PyPI package name for this project has changed. The `stac-validator` package on PyPI is no longer maintained. 
+>
+> To get the latest updates, bug fixes, and features (v4.2.0 and beyond), you must now install **`stac-valid`**.
+>
+> ### 🛠️ What you need to do
+> 
+> You only need to update your installation command or `requirements.txt`:
+> ```bash
+> # OLD
+> pip install stac-validator
+> 
+> # NEW
+> pip install stac-valid
+> ```
+> 
+> **Your existing Python code and CLI scripts DO NOT need to change.** > You will still use `import stac_validator` and the `stac-validator` CLI command exactly as you did before.
+
 ## Table of Contents
 
 - [Overview](#overview)
