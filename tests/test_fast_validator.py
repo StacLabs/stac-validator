@@ -304,3 +304,105 @@ class TestFastValidatorPerformance:
         fv = FastValidator(str(fc_path), quiet=True)
         fv.run()
         assert fv.valid is True
+
+    def test_message_attribute_structure(self, valid_item):
+        """Test that the message attribute has the correct structure."""
+        fv = FastValidator(valid_item, quiet=True)
+        fv.run()
+
+        # Verify message is a list with one dict
+        assert isinstance(fv.message, list)
+        assert len(fv.message) == 1
+
+        msg = fv.message[0]
+
+        # Verify required fields exist
+        assert "path" in msg
+        assert "valid_stac" in msg
+        assert "stac_versions" in msg
+        assert "schemas_checked" in msg
+        assert "total_objects" in msg
+        assert "valid_objects" in msg
+        assert "invalid_objects" in msg
+        assert "setup_time_ms" in msg
+        assert "execution_time_ms" in msg
+        assert "errors" in msg
+
+        # Verify field types
+        assert isinstance(msg["path"], str)
+        assert isinstance(msg["valid_stac"], bool)
+        assert isinstance(msg["stac_versions"], list)
+        assert isinstance(msg["schemas_checked"], list)
+        assert isinstance(msg["total_objects"], int)
+        assert isinstance(msg["valid_objects"], int)
+        assert isinstance(msg["invalid_objects"], int)
+        assert isinstance(msg["setup_time_ms"], float)
+        assert isinstance(msg["execution_time_ms"], float)
+        assert isinstance(msg["errors"], list)
+
+    def test_message_attribute_valid_items(self, valid_feature_collection):
+        """Test message attribute for valid items."""
+        fv = FastValidator(valid_feature_collection, quiet=True)
+        fv.run()
+
+        msg = fv.message[0]
+
+        # For valid items
+        assert msg["valid_stac"] is True
+        assert msg["total_objects"] == 5
+        assert msg["valid_objects"] == 5
+        assert msg["invalid_objects"] == 0
+        assert len(msg["errors"]) == 0
+
+        # Verify versions and schemas are tracked
+        assert len(msg["stac_versions"]) > 0
+        assert len(msg["schemas_checked"]) > 0
+        assert "1.0.0" in msg["stac_versions"]
+
+    def test_message_attribute_invalid_items(self, tmp_path):
+        """Test message attribute for invalid items."""
+        fc_path = tmp_path / "invalid_fc.json"
+        fc_data = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "stac_version": "1.0.0",
+                    "type": "Feature",
+                    "id": "item-1",
+                    "geometry": None,
+                    "properties": {"datetime": "2023-01-01T00:00:00Z"},
+                    "links": [{"rel": "self", "href": "http://example.com"}],
+                    "assets": {},
+                },
+                {
+                    "stac_version": "1.0.0",
+                    "type": "Feature",
+                    "id": "item-2",
+                    "geometry": None,
+                    # Missing required 'properties' field
+                    "links": [{"rel": "self", "href": "http://example.com"}],
+                    "assets": {},
+                },
+            ],
+        }
+        fc_path.write_text(json.dumps(fc_data))
+
+        fv = FastValidator(str(fc_path), quiet=True)
+        fv.run()
+
+        msg = fv.message[0]
+
+        # For mixed valid/invalid items
+        assert msg["valid_stac"] is False
+        assert msg["total_objects"] == 2
+        assert msg["valid_objects"] == 1
+        assert msg["invalid_objects"] == 1
+        assert len(msg["errors"]) > 0
+
+        # Verify error structure
+        for error in msg["errors"]:
+            assert "error_message" in error
+            assert "affected_items" in error
+            assert "count" in error
+            assert isinstance(error["affected_items"], list)
+            assert error["count"] == len(error["affected_items"])
