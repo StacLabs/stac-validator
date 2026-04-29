@@ -811,6 +811,54 @@ stac.validate_item_collection_dict(item_collection_dict)
 print(stac.message)
 ```
 
+**Fast Validation (High-Speed with Local Caching)**
+
+For large FeatureCollections or when you need maximum speed with minimal memory overhead:
+
+```python
+from stac_validator.fast_validator import FastValidator
+import json
+
+# Validate a FeatureCollection or single STAC object
+fv = FastValidator("large_collection.json", quiet=True)
+fv.run()
+
+# Access validation results via the message attribute
+print(json.dumps(fv.message, indent=2))
+
+# Example output:
+# {
+#   "path": "large_collection.json",
+#   "valid_stac": true,
+#   "stac_versions": ["1.0.0", "1.1.0"],
+#   "schemas_checked": [
+#     "https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json",
+#     "https://schemas.stacspec.org/v1.1.0/item-spec/json-schema/item.json",
+#     "https://stac-extensions.github.io/projection/v1.0.0/schema.json"
+#   ],
+#   "total_objects": 1000,
+#   "valid_objects": 998,
+#   "invalid_objects": 2,
+#   "setup_time_ms": 145.32,
+#   "execution_time_ms": 245.67,
+#   "errors": [
+#     {
+#       "error_message": "STAC Spec Violation: Missing {'rel': 'collection'} in links array.",
+#       "affected_items": ["item_1", "item_2"],
+#       "count": 2
+#     }
+#   ]
+# }
+
+# Check validity
+if fv.valid:
+    print(f"✅ All {fv.message[0]['valid_objects']} items are valid")
+else:
+    print(f"❌ {fv.message[0]['invalid_objects']} items failed validation")
+    for error in fv.message[0]['errors']:
+        print(f"  - {error['error_message']}: {error['count']} items affected")
+```
+
 **Configure Schema Cache Size**
 
 ```python

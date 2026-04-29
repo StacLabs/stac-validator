@@ -18,9 +18,13 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ## [v4.2.2] - 2026-04-29
 
+### Added
+
+- Added message output for fast validator command [#292](https://github.com/stac-utils/stac-validator/pull/292)
+
 ### Removed
 
-- Deprecation warnings for `stac-validator` installation [#291](https://github.com/stac-utils/stac-validator/pull/291)
+- Deprecation warnings for `stac-validator` installation [#292](https://github.com/stac-utils/stac-validator/pull/292)
 
 ## [v4.2.1] - 2026-04-27
 
@@ -440,7 +444,8 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - With the newest version - 1.0.0-beta.2 - items will run through jsonchema validation before the PySTAC validation. The reason for this is that jsonschema will give more informative error messages. This should be addressed better in the future. This is not the case with the --recursive option as time can be a concern here with larger collections.
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
-[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.2.1..main
+[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.2.2..main
+[v4.2.2]: https://github.com/sparkgeo/stac-validator/compare/v4.2.1..v4.2.2
 [v4.2.1]: https://github.com/sparkgeo/stac-validator/compare/v4.2.0..v4.2.1
 [v4.2.0]: https://github.com/sparkgeo/stac-validator/compare/v4.1.0..v4.2.0
 [v4.1.0]: https://github.com/sparkgeo/stac-validator/compare/v4.0.1..v4.1.0

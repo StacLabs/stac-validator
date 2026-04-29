@@ -561,13 +561,7 @@ def cli():
       stac-validator batch <file> --feature-collection [options]
       stac-validator fast <file> [options]
     """
-    if "stac-validator" in sys.argv[0]:
-        click.secho(
-            "⚠️ NOTICE: For v4.2.0+, the PyPI package has moved. "
-            "Please update your environments using: pip install stac-valid\n",
-            fg="yellow",
-            err=True,
-        )
+    pass
 
 
 # Register commands

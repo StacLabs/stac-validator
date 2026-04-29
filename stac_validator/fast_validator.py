@@ -132,6 +132,7 @@ class FastValidator:
         self.quiet = quiet
         self.valid = True
         self.verbose = verbose
+        self.message: List[Dict[str, Any]] = []
         QUIET_MODE = quiet
 
     def run(self):
@@ -199,6 +200,8 @@ class FastValidator:
         valid_count = 0
         invalid_count = 0
         error_registry: Dict[str, List[str]] = {}
+        stac_versions_found: set = set()
+        schemas_checked: set = set()
 
         for index, item in enumerate(items_to_validate):
             # Determine specific STAC attributes for this object
@@ -206,10 +209,31 @@ class FastValidator:
             stac_version = item.get("stac_version", "1.0.0")
             extensions = item.get("stac_extensions", [])
 
+            # Track versions and schemas
+            stac_versions_found.add(stac_version)
+
             # Map Feature->Item, others keep their type
             actual_type = (
                 "Item" if item.get("type") == "Feature" else item.get("type", "Catalog")
             )
+
+            # Build schema URI for this object type
+            stac_type_lower = actual_type.lower()
+            if stac_type_lower in ["item", "feature"]:
+                base_schema = f"https://schemas.stacspec.org/v{stac_version}/item-spec/json-schema/item.json"
+            elif stac_type_lower == "collection":
+                base_schema = f"https://schemas.stacspec.org/v{stac_version}/collection-spec/json-schema/collection.json"
+            elif stac_type_lower == "catalog":
+                base_schema = f"https://schemas.stacspec.org/v{stac_version}/catalog-spec/json-schema/catalog.json"
+            else:
+                base_schema = ""
+
+            if base_schema:
+                schemas_checked.add(base_schema)
+
+            # Track extensions
+            for ext in extensions:
+                schemas_checked.add(ext)
 
             # --- Setup Timer ---
             t0 = time.perf_counter()
@@ -308,5 +332,28 @@ class FastValidator:
                 if count > 3:
                     sample_ids += f" ... (and {count - 3} more)"
                 click.echo(f"   Examples:       {sample_ids}")
+
+        # Populate the message attribute for API usage (similar to StacValidate)
+        self.message = [
+            {
+                "path": self.stac_file,
+                "valid_stac": self.valid,
+                "stac_versions": sorted(list(stac_versions_found)),
+                "schemas_checked": sorted(list(schemas_checked)),
+                "total_objects": len(items_to_validate),
+                "valid_objects": valid_count,
+                "invalid_objects": invalid_count,
+                "setup_time_ms": total_setup_ms,
+                "execution_time_ms": total_exec_ms,
+                "errors": [
+                    {
+                        "error_message": err_msg,
+                        "affected_items": affected_ids,
+                        "count": len(affected_ids),
+                    }
+                    for err_msg, affected_ids in error_registry.items()
+                ],
+            }
+        ]
 
         click.echo("\n")
