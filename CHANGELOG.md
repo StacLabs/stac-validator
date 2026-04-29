@@ -16,6 +16,12 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ### Updated
 
+## [v4.2.2] - 2026-04-29
+
+### Removed
+
+- Deprecation warnings for `stac-validator` installation [#291](https://github.com/stac-utils/stac-validator/pull/291)
+
 ## [v4.2.1] - 2026-04-27
 
 ### Added
