@@ -10,7 +10,7 @@
   [![GitHub contributors](https://img.shields.io/github/contributors/stac-utils/stac-validator?color=blue)](https://github.com/stac-utils/stac-validator/graphs/contributors)
   [![GitHub stars](https://img.shields.io/github/stars/stac-utils/stac-validator.svg?color=blue)](https://github.com/stac-utils/stac-validator/stargazers)
   [![GitHub forks](https://img.shields.io/github/forks/stac-utils/stac-validator.svg?color=blue)](https://github.com/stac-utils/stac-validator/network/members)
-   [![PyPI version](https://img.shields.io/pypi/v/stac-validator.svg?color=blue)](https://pypi.org/project/stac-validator/)
+   [![PyPI version](https://img.shields.io/pypi/v/stac-valid.svg?color=blue)](https://pypi.org/project/stac-valid/)
   [![STAC](https://img.shields.io/badge/STAC-1.1.0-blue.svg)](https://github.com/radiantearth/stac-spec/tree/v1.1.0)
 
 
