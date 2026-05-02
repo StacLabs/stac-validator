@@ -1,0 +1,1378 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>stac-validator documentation &mdash; stac-validator 3.3.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b8bac34f"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CLI API Reference" href="cli.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            stac-validator
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validator.html">Validate API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">stac-validator</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><code class="docutils literal notranslate"><span class="pre">stac-validator</span></code> documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="stac-validator-documentation">
+<h1><code class="docutils literal notranslate"><span class="pre">stac-validator</span></code> documentation<a class="headerlink" href="#stac-validator-documentation" title="Permalink to this heading"></a></h1>
+<!-- markdownlint-disable MD033 MD041 -->
+<p align="left">
+  <img src="https://raw.githubusercontent.com/stac-utils/stac-validator/main/assets/stac-validator.png" width=560>
+</p>
+<p><a class="reference external" href="https://pepy.tech/projects/stac-validator"><img alt="PyPI Downloads" src="https://static.pepy.tech/personalized-badge/stac-validator?period=total&amp;units=NONE&amp;left_color=GREY&amp;right_color=BLUE&amp;left_text=downloads" /></a>
+<a class="reference external" href="https://github.com/stac-utils/stac-validator/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/stac-utils/stac-validator?color=blue" /></a>
+<a class="reference external" href="https://github.com/stac-utils/stac-validator/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/stac-utils/stac-validator.svg?color=blue" /></a>
+<a class="reference external" href="https://github.com/stac-utils/stac-validator/network/members"><img alt="GitHub forks" src="https://img.shields.io/github/forks/stac-utils/stac-validator.svg?color=blue" /></a>
+<a class="reference external" href="https://pypi.org/project/stac-valid/"><img alt="PyPI version" src="https://img.shields.io/pypi/v/stac-valid.svg?color=blue" /></a>
+<a class="reference external" href="https://github.com/radiantearth/stac-spec/tree/v1.1.0"><img alt="STAC" src="https://img.shields.io/badge/STAC-1.1.0-blue.svg" /></a></p>
+<blockquote>
+<div><p>⚠️ <strong>IMPORTANT NOTICE: PyPI Package Renamed</strong> ⚠️</p>
+<p>Due to an administrative transition, the PyPI package name for this project has changed. The <code class="docutils literal notranslate"><span class="pre">stac-validator</span></code> package on PyPI is no longer maintained.</p>
+<p>To get the latest updates, bug fixes, and features (v4.2.0 and beyond), you must now install <strong><code class="docutils literal notranslate"><span class="pre">stac-valid</span></code></strong>.</p>
+<h3 class="rubric" id="what-you-need-to-do">🛠️ What you need to do</h3>
+<p>You only need to update your installation command or <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># OLD</span>
+pip<span class="w"> </span>install<span class="w"> </span>stac-validator
+
+<span class="c1"># NEW</span>
+pip<span class="w"> </span>install<span class="w"> </span>stac-valid
+</pre></div>
+</div>
+<p><strong>Your existing Python code and CLI scripts DO NOT need to change.</strong> &gt; You will still use <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">stac_validator</span></code> and the <code class="docutils literal notranslate"><span class="pre">stac-validator</span></code> CLI command exactly as you did before.</p>
+</div></blockquote>
+<section id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="#overview">Overview</a></p></li>
+<li><p><a class="reference internal" href="#documentation">Documentation</a></p></li>
+<li><p><a class="reference internal" href="#requirements">Requirements</a></p></li>
+<li><p><a class="reference internal" href="#install">Installation</a></p></li>
+<li><p><a class="reference internal" href="#versions-supported">Supported STAC Versions</a></p></li>
+<li><p><a class="reference internal" href="#usage">Usage</a></p>
+<ul>
+<li><p><a class="reference internal" href="#cli">CLI</a></p>
+<ul>
+<li><p><a class="reference internal" href="#legacy-validation"><span class="xref myst">Legacy Validation</span></a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#batch-validation"><span class="xref myst">Batch Validation</span></a></p></li>
+<li><p><a class="reference internal" href="#fast-validation"><span class="xref myst">Fast Validation</span></a></p></li>
+<li><p><a class="reference internal" href="#python">Python</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#schema-cache-settings">Schema Cache Settings</a></p></li>
+<li><p><a class="reference internal" href="#performance-benchmarking">Performance Benchmarking</a></p></li>
+<li><p><a class="reference internal" href="#additional-examples">Examples</a></p>
+<ul>
+<li><p><a class="reference internal" href="#core">Core Validation</a></p></li>
+<li><p><a class="reference internal" href="#custom">Custom Schema</a></p></li>
+<li><p><a class="reference internal" href="#extensions">Extensions Validation</a></p></li>
+<li><p><a class="reference internal" href="#recursive">Recursive Validation</a></p></li>
+<li><p><a class="reference internal" href="#item-collection">Item Collection Validation</a></p></li>
+<li><p><a class="reference internal" href="#header">Using Headers</a></p></li>
+<li><p><a class="reference internal" href="#schema-map">Schema Mapping</a></p></li>
+<li><p><a class="reference internal" href="#schema-config">Schema Config</a></p></li>
+<li><p><a class="reference internal" href="#pydantic">Pydantic Validation</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#deployment">Deployment</a></p>
+<ul>
+<li><p><a class="reference internal" href="#docker">Docker</a></p></li>
+<li><p><a class="reference internal" href="#aws-cdk">AWS (CDK)</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#testing">Testing</a></p></li>
+<li><p><a class="reference internal" href="#related-projects">Related Projects</a></p></li>
+<li><p><a class="reference internal" href="#sponsors-and-supporters"><span class="xref myst">Sponsors and Supporters</span></a></p></li>
+<li><p><a class="reference internal" href="#contributing"><span class="xref myst">Contributing</span></a></p></li>
+<li><p><a class="reference internal" href="#license"><span class="xref myst">License</span></a></p></li>
+</ul>
+</section>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading"></a></h2>
+<p>STAC Validator is a tool to validate <a class="reference external" href="https://github.com/radiantearth/stac-spec">STAC (SpatioTemporal Asset Catalog)</a> json files against the official STAC specification. It provides both a command-line interface and a Python API for validating STAC objects.</p>
+</section>
+<section id="documentation">
+<h2>Documentation<a class="headerlink" href="#documentation" title="Permalink to this heading"></a></h2>
+<p>For detailed documentation, please visit our <a class="reference external" href="https://stac-utils.github.io/stac-validator/">GitHub Pages documentation site</a>.</p>
+</section>
+<section id="validate-stac-json-files-against-the-stac-spec">
+<h2>Validate STAC json files against the <a class="reference external" href="https://github.com/radiantearth/stac-spec">STAC spec</a>.<a class="headerlink" href="#validate-stac-json-files-against-the-stac-spec" title="Permalink to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://raw.githubusercontent.com/radiantearth/stac-spec/master/examples/extended-item.json
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/radiantearth/stac-spec/master/examples/extended-item.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/eo/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/projection/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/scientific/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/view/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/remote-data/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span>true,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;ITEM&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;default&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Python 3.8+</p>
+<ul>
+<li><p>Requests</p></li>
+<li><p>Click</p></li>
+<li><p>Jsonschema</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="related-projects">
+<h2>Related Projects<a class="headerlink" href="#related-projects" title="Permalink to this heading"></a></h2>
+<p>Note: Stac-validator is also used in stac-check which adds linting messages based on the official STAC best practices document.
+https://github.com/stac-utils/stac-check</p>
+</section>
+<section id="install">
+<h2>Install<a class="headerlink" href="#install" title="Permalink to this heading"></a></h2>
+<section id="installation-from-pypi">
+<h3>Installation from PyPi<a class="headerlink" href="#installation-from-pypi" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>stac-valid
+</pre></div>
+</div>
+</section>
+<section id="installation-from-repo">
+<h3>Installation from Repo<a class="headerlink" href="#installation-from-repo" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>.
+</pre></div>
+</div>
+<p>or for local development</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;.[dev]&#39;</span>
+</pre></div>
+</div>
+<p>The <a class="reference download internal" download="" href="_downloads/b67911656ef5d18c4ae36cb6741b7965/Makefile"><span class="xref download myst">Makefile</span></a> has convenience commands if Make is installed.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span><span class="nb">help</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="versions-supported">
+<h2>Versions supported<a class="headerlink" href="#versions-supported" title="Permalink to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>STAC</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0.8.0</p></td>
+</tr>
+<tr class="row-odd"><td><p>0.8.1</p></td>
+</tr>
+<tr class="row-even"><td><p>0.9.0</p></td>
+</tr>
+<tr class="row-odd"><td><p>1.0.0-beta.1</p></td>
+</tr>
+<tr class="row-even"><td><p>1.0.0-beta.2</p></td>
+</tr>
+<tr class="row-odd"><td><p>1.0.0-rc.1</p></td>
+</tr>
+<tr class="row-even"><td><p>1.0.0-rc.2</p></td>
+</tr>
+<tr class="row-odd"><td><p>1.0.0-rc.3</p></td>
+</tr>
+<tr class="row-even"><td><p>1.0.0-rc.4</p></td>
+</tr>
+<tr class="row-odd"><td><p>1.0.0</p></td>
+</tr>
+<tr class="row-even"><td><p>1.1.0-beta.1</p></td>
+</tr>
+<tr class="row-odd"><td><p>1.1.0</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this heading"></a></h2>
+<section id="cli">
+<h3>CLI<a class="headerlink" href="#cli" title="Permalink to this heading"></a></h3>
+<p><strong>Basic Usage</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>--help
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Usage:<span class="w"> </span>stac-validator<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+
+<span class="w">  </span>STAC<span class="w"> </span>Validator<span class="w"> </span>-<span class="w"> </span>Validate<span class="w"> </span>STAC<span class="w"> </span>files<span class="w"> </span>against<span class="w"> </span>the<span class="w"> </span>STAC<span class="w"> </span>specification.
+
+<span class="w">  </span>Usage:
+<span class="w">    </span>stac-validator<span class="w"> </span>validate<span class="w"> </span>&lt;file&gt;<span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
+<span class="w">    </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>&lt;files&gt;<span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
+<span class="w">    </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>&lt;file&gt;<span class="w"> </span>--item-collection<span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
+
+
+Options:
+<span class="w">  </span>--help<span class="w">  </span>Show<span class="w"> </span>this<span class="w"> </span>message<span class="w"> </span>and<span class="w"> </span>exit.
+
+Commands:
+<span class="w">  </span>batch<span class="w">     </span>Validate<span class="w"> </span>multiple<span class="w"> </span>STAC<span class="w"> </span>files<span class="w"> </span>concurrently<span class="w"> </span>using<span class="w"> </span>all<span class="w"> </span>available...
+<span class="w">  </span>validate<span class="w">  </span>Main<span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>the<span class="w"> </span><span class="sb">`</span>stac-validator<span class="sb">`</span><span class="w"> </span><span class="nb">command</span><span class="w"> </span>line<span class="w"> </span>tool.
+</pre></div>
+</div>
+<p><strong>Validate Command</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>validate<span class="w"> </span>--help
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Usage:<span class="w"> </span>stac-validator<span class="w"> </span>validate<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>STAC_FILE
+
+<span class="w">  </span>Validate<span class="w"> </span>a<span class="w"> </span>STAC<span class="w"> </span>file<span class="w"> </span>against<span class="w"> </span>the<span class="w"> </span>STAC<span class="w"> </span>specification.
+
+<span class="w">  </span>Prints<span class="w"> </span>validation<span class="w"> </span>results<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>console<span class="w"> </span>as<span class="w"> </span>JSON.<span class="w"> </span>Exits<span class="w"> </span>with<span class="w"> </span>status<span class="w"> </span>code<span class="w"> </span><span class="m">0</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span>valid,<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="k">if</span><span class="w"> </span>invalid.
+
+Options:
+<span class="w">  </span>--core<span class="w">                          </span>Validate<span class="w"> </span>core<span class="w"> </span>stac<span class="w"> </span>object<span class="w"> </span>only<span class="w"> </span>without
+<span class="w">                                  </span>extensions.
+<span class="w">  </span>--extensions<span class="w">                    </span>Validate<span class="w"> </span>extensions<span class="w"> </span>only.
+<span class="w">  </span>--links<span class="w">                         </span>Additionally<span class="w"> </span>validate<span class="w"> </span>links.<span class="w"> </span>Only<span class="w"> </span>works<span class="w"> </span>with
+<span class="w">                                  </span>default<span class="w"> </span>mode.
+<span class="w">  </span>--assets<span class="w">                        </span>Additionally<span class="w"> </span>validate<span class="w"> </span>assets.<span class="w"> </span>Only<span class="w"> </span>works
+<span class="w">                                  </span>with<span class="w"> </span>default<span class="w"> </span>mode.
+<span class="w">  </span>-c,<span class="w"> </span>--custom<span class="w"> </span>TEXT<span class="w">               </span>Validate<span class="w"> </span>against<span class="w"> </span>a<span class="w"> </span>custom<span class="w"> </span>schema<span class="w"> </span><span class="o">(</span><span class="nb">local</span>
+<span class="w">                                  </span>filepath<span class="w"> </span>or<span class="w"> </span>remote<span class="w"> </span>schema<span class="o">)</span>.
+<span class="w">  </span>-sc,<span class="w"> </span>--schema-config<span class="w"> </span>TEXT<span class="w">       </span>Validate<span class="w"> </span>against<span class="w"> </span>a<span class="w"> </span>custom<span class="w"> </span>schema<span class="w"> </span>config
+<span class="w">                                  </span><span class="o">(</span><span class="nb">local</span><span class="w"> </span>filepath<span class="w"> </span>or<span class="w"> </span>remote<span class="w"> </span>schema<span class="w"> </span>config<span class="o">)</span>.
+<span class="w">  </span>-s,<span class="w"> </span>--schema-map<span class="w"> </span>&lt;TEXT<span class="w"> </span>TEXT&gt;...
+<span class="w">                                  </span>Schema<span class="w"> </span>path<span class="w"> </span>to<span class="w"> </span>replaced<span class="w"> </span>by<span class="w"> </span><span class="o">(</span><span class="nb">local</span><span class="o">)</span><span class="w"> </span>schema
+<span class="w">                                  </span>path<span class="w"> </span>during<span class="w"> </span>validation.<span class="w"> </span>Can<span class="w"> </span>be<span class="w"> </span>used<span class="w"> </span>multiple
+<span class="w">                                  </span>times.
+<span class="w">  </span>-r,<span class="w"> </span>--recursive<span class="w">                 </span>Recursively<span class="w"> </span>validate<span class="w"> </span>all<span class="w"> </span>related<span class="w"> </span>stac
+<span class="w">                                  </span>objects.
+<span class="w">  </span>-m,<span class="w"> </span>--max-depth<span class="w"> </span>INTEGER<span class="w">         </span>Maximum<span class="w"> </span>depth<span class="w"> </span>to<span class="w"> </span>traverse<span class="w"> </span>when<span class="w"> </span>recursing.
+<span class="w">                                  </span>Omit<span class="w"> </span>this<span class="w"> </span>argument<span class="w"> </span>to<span class="w"> </span>get<span class="w"> </span>full<span class="w"> </span>recursion.
+<span class="w">                                  </span>Ignored<span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="sb">`</span><span class="nv">recursive</span><span class="w"> </span><span class="o">==</span><span class="w"> </span>False<span class="sb">`</span>.
+<span class="w">  </span>--collections<span class="w">                   </span>Validate<span class="w"> </span>/collections<span class="w"> </span>response.
+<span class="w">  </span>--item-collection<span class="w">               </span>Validate<span class="w"> </span>item<span class="w"> </span>collection<span class="w"> </span>response.<span class="w"> </span>Can<span class="w"> </span>be
+<span class="w">                                  </span>combined<span class="w"> </span>with<span class="w"> </span>--pages.<span class="w"> </span>Defaults<span class="w"> </span>to<span class="w"> </span>one<span class="w"> </span>page.
+<span class="w">  </span>--no-assets-urls<span class="w">                </span>Disables<span class="w"> </span>the<span class="w"> </span>opening<span class="w"> </span>of<span class="w"> </span>href<span class="w"> </span>links<span class="w"> </span>when
+<span class="w">                                  </span>validating<span class="w"> </span>assets<span class="w"> </span><span class="o">(</span>enabled<span class="w"> </span>by<span class="w"> </span>default<span class="o">)</span>.
+<span class="w">  </span>--header<span class="w"> </span>&lt;TEXT<span class="w"> </span>TEXT&gt;...<span class="w">         </span>HTTP<span class="w"> </span>header<span class="w"> </span>to<span class="w"> </span>include<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>requests.<span class="w"> </span>Can
+<span class="w">                                  </span>be<span class="w"> </span>used<span class="w"> </span>multiple<span class="w"> </span>times.
+<span class="w">  </span>-p,<span class="w"> </span>--pages<span class="w"> </span>INTEGER<span class="w">             </span>Maximum<span class="w"> </span>number<span class="w"> </span>of<span class="w"> </span>pages<span class="w"> </span>to<span class="w"> </span>validate<span class="w"> </span>via
+<span class="w">                                  </span>--item-collection.<span class="w"> </span>Defaults<span class="w"> </span>to<span class="w"> </span>one<span class="w"> </span>page.
+<span class="w">  </span>-t,<span class="w"> </span>--trace-recursion<span class="w">           </span>Enables<span class="w"> </span>verbose<span class="w"> </span>output<span class="w"> </span><span class="k">for</span><span class="w"> </span>recursive<span class="w"> </span>mode.
+<span class="w">  </span>--no_output<span class="w">                     </span>Do<span class="w"> </span>not<span class="w"> </span>print<span class="w"> </span>output<span class="w"> </span>to<span class="w"> </span>console.
+<span class="w">  </span>--log_file<span class="w"> </span>TEXT<span class="w">                 </span>Save<span class="w"> </span>full<span class="w"> </span>recursive<span class="w"> </span>output<span class="w"> </span>to<span class="w"> </span>log<span class="w"> </span>file
+<span class="w">                                  </span><span class="o">(</span><span class="nb">local</span><span class="w"> </span>filepath<span class="o">)</span>.
+<span class="w">  </span>--pydantic<span class="w">                      </span>Validate<span class="w"> </span>using<span class="w"> </span>stac-pydantic<span class="w"> </span>models<span class="w"> </span><span class="k">for</span>
+<span class="w">                                  </span>enhanced<span class="w"> </span><span class="nb">type</span><span class="w"> </span>checking<span class="w"> </span>and<span class="w"> </span>validation.
+<span class="w">  </span>--verbose<span class="w">                       </span>Enable<span class="w"> </span>verbose<span class="w"> </span>output.<span class="w"> </span>This<span class="w"> </span>will<span class="w"> </span>output
+<span class="w">                                  </span>additional<span class="w"> </span>information<span class="w"> </span>during<span class="w"> </span>validation.
+<span class="w">  </span>--schema-cache-size<span class="w"> </span>INTEGER<span class="w">     </span>Max<span class="w"> </span>number<span class="w"> </span>of<span class="w"> </span>schema<span class="w"> </span>entries<span class="w"> </span>to<span class="w"> </span>cache<span class="w"> </span><span class="k">in</span>
+<span class="w">                                  </span>memory.<span class="w"> </span>Use<span class="w"> </span><span class="m">0</span><span class="w"> </span>to<span class="w"> </span>disable<span class="w"> </span>schema<span class="w"> </span>caching.
+<span class="w">                                  </span>Defaults<span class="w"> </span>to<span class="w"> </span><span class="m">16</span>.
+<span class="w">  </span>--help<span class="w">                          </span>Show<span class="w"> </span>this<span class="w"> </span>message<span class="w"> </span>and<span class="w"> </span>exit.
+</pre></div>
+</div>
+<p><strong>Batch Command</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>--help
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Usage: stac-validator batch [OPTIONS] FILES...
+
+  Validate multiple STAC files concurrently using all available CPU cores.
+
+  This command uses multiprocessing to validate STAC files in parallel,
+  bypassing Python&#39;s Global Interpreter Lock (GIL) for maximum performance.
+  Each CPU core gets its own schema cache, which is warmed up on the first
+  file and reused for subsequent files.
+
+  Examples:
+
+      # Validate all JSON files in a directory
+      $ stac-validator batch *.json
+
+      # Validate specific files
+      $ stac-validator batch file1.json file2.json file3.json
+
+      # Validate a GeoJSON FeatureCollection (validates each feature individually)
+      $ stac-validator batch --item-collection sample_data/sentinel-cogs_0_100.json
+
+      # Use only 4 cores
+      $ stac-validator batch *.json --cores 4
+
+      # Disable progress bar
+      $ stac-validator batch *.json --no-progress
+
+Options:
+  --cores INTEGER       Number of CPU cores to use for parallel validation.
+                        Defaults to all available cores.
+  --no-progress         Disable progress bar during validation.
+  --no-output           Do not print output to console.
+  --item-collection  Treat files as GeoJSON FeatureCollections and validate
+                        each feature individually.
+  --verbose             Show full JSON output for all items. By default, only
+                        invalid items are shown.
+  --schema-cache-size INTEGER  Max number of schema entries to cache
+                             per worker process. Use 0 to disable
+                             schema caching. Defaults to 16.
+  --batch-size INTEGER         Batch size for chunked processing. Larger
+                               batches use more memory but may be faster.
+                               Defaults to 2000.
+  --help                Show this message and exit.
+</pre></div>
+</div>
+<p><strong>Fast Command</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-valid<span class="w"> </span>fast<span class="w"> </span>--help
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Usage:<span class="w"> </span>stac-valid<span class="w"> </span>fast<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>STAC_FILE
+
+<span class="w">  </span>High-speed<span class="w"> </span>validation<span class="w"> </span>using<span class="w"> </span>fastjsonschema<span class="w"> </span>and<span class="w"> </span><span class="nb">local</span><span class="w"> </span>caching.
+
+Options:
+<span class="w">  </span>-q,<span class="w"> </span>--quiet<span class="w">    </span>Suppress<span class="w"> </span>individual<span class="w"> </span>item<span class="w"> </span>logs.
+<span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">  </span>Show<span class="w"> </span>full<span class="w"> </span>validation<span class="w"> </span>logs<span class="w"> </span><span class="k">for</span><span class="w"> </span>all<span class="w"> </span>items.<span class="w"> </span>By<span class="w"> </span>default,<span class="w"> </span>only
+<span class="w">                 </span>invalid<span class="w"> </span>items<span class="w"> </span>are<span class="w"> </span>shown.
+<span class="w">  </span>--help<span class="w">         </span>Show<span class="w"> </span>this<span class="w"> </span>message<span class="w"> </span>and<span class="w"> </span>exit.
+</pre></div>
+</div>
+<section id="legacy-validation">
+<h4>Legacy Validation<a class="headerlink" href="#legacy-validation" title="Permalink to this heading"></a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">validate</span></code> command is the main legacy validation tool with comprehensive options:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Basic single file validation</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>validate<span class="w"> </span>path/to/stac_file.json
+
+<span class="c1"># Validate with custom schema</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>validate<span class="w"> </span>item.json<span class="w"> </span>--custom<span class="w"> </span>/path/to/schema.json
+
+<span class="c1"># Recursively validate all related STAC objects</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>validate<span class="w"> </span>catalog.json<span class="w"> </span>--recursive<span class="w"> </span>--max-depth<span class="w"> </span><span class="m">5</span>
+
+<span class="c1"># Validate collections endpoint response</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>validate<span class="w"> </span>https://example.com/collections<span class="w"> </span>--collections
+
+<span class="c1"># Validate item collection response</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>validate<span class="w"> </span>https://example.com/search<span class="w"> </span>--item-collection<span class="w"> </span>--pages<span class="w"> </span><span class="m">10</span>
+
+<span class="c1"># Validate with extensions and links</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>validate<span class="w"> </span>item.json<span class="w"> </span>--extensions<span class="w"> </span>--links<span class="w"> </span>--assets
+</pre></div>
+</div>
+<p><strong>Options include:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--core</span></code> - Validate core STAC only (skip extensions)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--extensions</span></code> - Validate extensions only</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--links</span></code> - Validate link objects</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--assets</span></code> - Validate asset objects</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--recursive</span></code> - Recursively validate related STAC objects</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--custom</span></code> - Validate against custom schema</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--schema-map</span></code> - Replace schema URLs during validation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--collections</span></code> - Validate /collections endpoint response</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--item-collection</span></code> - Validate item collection responses</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--pydantic</span></code> - Use Pydantic models for validation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--schema-cache-size</span></code> - Configure schema cache size</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--batch-size</span></code> - Configure batch size for chunked processing (batch command only)</p></li>
+<li><p>And more (see <code class="docutils literal notranslate"><span class="pre">stac-validator</span> <span class="pre">validate</span> <span class="pre">--help</span></code>)</p></li>
+</ul>
+</section>
+<section id="batch-validation">
+<h4>Batch Validation<a class="headerlink" href="#batch-validation" title="Permalink to this heading"></a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">batch</span></code> command validates multiple STAC files concurrently using multiprocessing to bypass Python’s Global Interpreter Lock (GIL). This enables <strong>10-100x performance improvement</strong> over single-threaded validation by utilizing all available CPU cores.</p>
+<p><strong>Architecture:</strong></p>
+<ul class="simple">
+<li><p><strong>Multiprocessing:</strong> Each CPU core runs an independent Python process</p></li>
+<li><p><strong>Per-worker schema cache:</strong> Each worker maintains its own LRU cache of downloaded schemas (default 16 per worker)</p></li>
+<li><p><strong>Cache warmup:</strong> First file on each worker downloads schemas, subsequent files use cached copies</p></li>
+<li><p><strong>Configurable cache:</strong> Use <code class="docutils literal notranslate"><span class="pre">--schema-cache-size</span></code> to adjust cache size per worker (0 = disabled)</p></li>
+<li><p><strong>Linear scaling:</strong> Performance scales linearly with available cores (e.g., 8 cores = ~8x faster)</p></li>
+<li><p><strong>Container-aware:</strong> Automatically detects Docker/ECS CPU limits via <code class="docutils literal notranslate"><span class="pre">os.sched_getaffinity()</span></code></p></li>
+</ul>
+<p><strong>Basic Usage</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Validate all JSON files in current directory</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json
+
+<span class="c1"># Validate specific files</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>item1.json<span class="w"> </span>item2.json<span class="w"> </span>item3.json
+
+<span class="c1"># Validate a FeatureCollection (extracts and validates each feature)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>collection.json<span class="w"> </span>--item-collection
+</pre></div>
+</div>
+<p><strong>Options</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use specific number of cores</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json<span class="w"> </span>--cores<span class="w"> </span><span class="m">4</span>
+
+<span class="c1"># Reserve cores for OS (useful on local machines)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json<span class="w"> </span>--cores<span class="w"> </span>-1<span class="w">  </span><span class="c1"># Uses all cores minus 1</span>
+
+<span class="c1"># Disable progress bar (for CI/CD environments)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json<span class="w"> </span>--no-progress
+
+<span class="c1"># Suppress JSON output (show only summary)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json<span class="w"> </span>--no-output
+
+<span class="c1"># Configure schema cache size per worker (default: 16 schemas per worker)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json<span class="w"> </span>--schema-cache-size<span class="w"> </span><span class="m">32</span>
+
+<span class="c1"># Disable schema caching entirely</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json<span class="w"> </span>--schema-cache-size<span class="w"> </span><span class="m">0</span>
+
+<span class="c1"># Configure batch size for chunked processing (default: 2000 items per chunk)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json<span class="w"> </span>--batch-size<span class="w"> </span><span class="m">5000</span>
+
+<span class="c1"># Use larger batch size for faster processing (uses more memory)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>collection.json<span class="w"> </span>--item-collection<span class="w"> </span>--batch-size<span class="w"> </span><span class="m">10000</span>
+
+<span class="c1"># Use smaller batch size for memory-constrained environments</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>*.json<span class="w"> </span>--batch-size<span class="w"> </span><span class="m">500</span>
+</pre></div>
+</div>
+<p><strong>Batch Size Configuration</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--batch-size</span></code> option controls how many items are processed in each chunk. This affects memory usage and performance:</p>
+<ul class="simple">
+<li><p><strong>Default (2000):</strong> Balanced memory usage and performance for most systems</p></li>
+<li><p><strong>Larger values (5000-10000):</strong> Faster processing on systems with abundant memory; reduces overhead from creating multiple worker pools</p></li>
+<li><p><strong>Smaller values (500-1000):</strong> Lower memory footprint; useful on memory-constrained systems or when validating very large items</p></li>
+</ul>
+<p><strong>How It Works</strong></p>
+<ol class="arabic simple">
+<li><p><strong>Startup:</strong> Detects available CPU cores (respects Docker limits)</p></li>
+<li><p><strong>Distribution:</strong> Distributes files across worker processes</p></li>
+<li><p><strong>Validation:</strong> Each worker validates files independently</p></li>
+<li><p><strong>Schema Caching:</strong> Each worker maintains its own LRU cache (default 16 schemas per worker)</p>
+<ul class="simple">
+<li><p>First file on a worker: schemas are fetched and cached</p></li>
+<li><p>Subsequent files: schemas are reused from cache (no network/disk I/O)</p></li>
+<li><p>Total memory: up to <code class="docutils literal notranslate"><span class="pre">cores</span> <span class="pre">×</span> <span class="pre">schema_cache_size</span></code> schemas in memory</p></li>
+</ul>
+</li>
+<li><p><strong>Results:</strong> Aggregates results and displays summary statistics</p></li>
+</ol>
+<p><strong>Example Output</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>batch<span class="w"> </span>--item-collection<span class="w"> </span>sample_data/sentinel-cogs_0_100.json
+<span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;sample_data/sentinel-cogs_0_100.json[0]&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span>false,
+<span class="w">        </span><span class="s2">&quot;errors&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;&#39;eo:bands&#39; does not match any of the regexes: &#39;^(?!eo:)&#39;. Error is in properties &quot;</span>
+<span class="w">        </span><span class="o">]</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+
+Validation<span class="w"> </span>Summary:
+<span class="w">  </span>Total<span class="w"> </span>files:<span class="w"> </span><span class="m">100</span>
+<span class="w">  </span>CPU<span class="w"> </span>cores<span class="w"> </span>used:<span class="w"> </span><span class="m">16</span>
+<span class="w">  </span>✅<span class="w"> </span>Valid:<span class="w"> </span><span class="m">99</span>
+<span class="w">  </span>❌<span class="w"> </span>Invalid:<span class="w"> </span><span class="m">1</span>
+
+Failed<span class="w"> </span>validations:
+<span class="w">  </span>sample_data/sentinel-cogs_0_100.json<span class="o">[</span><span class="m">0</span><span class="o">]</span>
+<span class="w">    </span>-<span class="w"> </span><span class="s1">&#39;eo:bands&#39;</span><span class="w"> </span>does<span class="w"> </span>not<span class="w"> </span>match<span class="w"> </span>any<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>regexes:<span class="w"> </span><span class="s1">&#39;^(?!eo:)&#39;</span>.<span class="w"> </span>Error<span class="w"> </span>is<span class="w"> </span><span class="k">in</span><span class="w"> </span>properties
+
+Validation<span class="w"> </span>completed<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span>.10s
+</pre></div>
+</div>
+<p><strong>Performance Characteristics</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Scenario</p></th>
+<th class="head"><p>Single-threaded</p></th>
+<th class="head"><p>Batch (8 cores)</p></th>
+<th class="head"><p>Speedup</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>10000 items</p></td>
+<td><p>~130 seconds</p></td>
+<td><p>~22 seconds</p></td>
+<td><p>5.9x</p></td>
+</tr>
+</tbody>
+</table>
+<p><em>Times vary based on schema complexity and network latency for first download</em></p>
+<p><strong>Python API</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.batch_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_concurrently</span>
+
+<span class="c1"># Validate files</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">validate_concurrently</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;item1.json&quot;</span><span class="p">,</span> <span class="s2">&quot;item2.json&quot;</span><span class="p">,</span> <span class="s2">&quot;item3.json&quot;</span><span class="p">],</span>
+    <span class="n">max_workers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Auto-detect cores</span>
+    <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="c1"># Validate FeatureCollections</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">validate_concurrently</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;collection.json&quot;</span><span class="p">],</span>
+    <span class="n">feature_collection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_workers</span><span class="o">=</span><span class="mi">8</span>
+<span class="p">)</span>
+
+<span class="c1"># Process results</span>
+<span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;valid_stac&quot;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">error</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;errors&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   - </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Use Cases</strong></p>
+<ul class="simple">
+<li><p><strong>Bulk ingestion:</strong> Validate thousands of STAC items from ESA, Copernicus, or other catalogs</p></li>
+<li><p><strong>CI/CD pipelines:</strong> Validate entire dataset collections in GitHub Actions or AWS CodePipeline</p></li>
+<li><p><strong>Data quality checks:</strong> Periodically validate all items in a STAC catalog</p></li>
+<li><p><strong>Migration validation:</strong> Verify all items when upgrading STAC versions</p></li>
+<li><p><strong>API preprocessing:</strong> Validate incoming FeatureCollections before storage (see FastAPI integration)</p></li>
+</ul>
+</section>
+<section id="fast-validation">
+<h4>Fast Validation<a class="headerlink" href="#fast-validation" title="Permalink to this heading"></a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">fast</span></code> command provides ultra-high-speed validation using <code class="docutils literal notranslate"><span class="pre">fastjsonschema</span></code> with intelligent caching. It’s optimized for large FeatureCollections, delivering <strong>batch-like performance with significantly lower memory overhead</strong> by using a single-threaded, compiled validator approach instead of multiprocessing.</p>
+<p><strong>Key Features:</strong></p>
+<ul class="simple">
+<li><p><strong>fastjsonschema:</strong> Compiled validators for 10-100x faster validation than standard jsonschema</p></li>
+<li><p><strong>Single-threaded:</strong> No multiprocessing overhead - ideal for memory-constrained environments</p></li>
+<li><p><strong>Batch-comparable speed:</strong> Similar throughput to batch command but with minimal memory footprint</p></li>
+<li><p><strong>Multi-tier caching:</strong> RAM → Disk → Network with automatic fallback</p></li>
+<li><p><strong>Local schema storage:</strong> Schemas cached locally under <code class="docutils literal notranslate"><span class="pre">local_schemas/.schemas</span></code> directory for instant reuse</p></li>
+<li><p><strong>Automatic detection:</strong> Detects STAC type (Item, Collection, Catalog, FeatureCollection) automatically</p></li>
+<li><p><strong>Detailed metrics:</strong> Shows setup time, execution time, and cache hit status for each item</p></li>
+<li><p><strong>Error grouping:</strong> Groups validation errors by type and shows affected items</p></li>
+</ul>
+<p><strong>Basic Usage</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Validate a single STAC Item</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>fast<span class="w"> </span>item.json
+
+<span class="c1"># Validate a FeatureCollection (validates each feature)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>fast<span class="w"> </span>collection.json
+
+<span class="c1"># Validate a STAC Collection</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>fast<span class="w"> </span>collection-metadata.json
+
+<span class="c1"># Validate a STAC Catalog</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>fast<span class="w"> </span>catalog.json
+</pre></div>
+</div>
+<p><strong>Options</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Suppress output (only show summary)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>fast<span class="w"> </span>item.json<span class="w"> </span>--quiet
+
+<span class="c1"># Show detailed output for all items (default shows first 5)</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>fast<span class="w"> </span>collection.json<span class="w"> </span>--verbose
+
+<span class="c1"># Combine options</span>
+$<span class="w"> </span>stac-validator<span class="w"> </span>fast<span class="w"> </span>collection.json<span class="w"> </span>--verbose<span class="w"> </span>--quiet<span class="w">  </span><span class="c1"># Quiet takes precedence</span>
+</pre></div>
+</div>
+<p><strong>Example Output</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>fast<span class="w"> </span>sample_data/sentinel-cogs_0_100.json
+
+📂<span class="w"> </span>Loading:<span class="w"> </span>sample_data/sentinel-cogs_0_100.json
+📦<span class="w"> </span>Detected<span class="w"> </span>FeatureCollection<span class="w"> </span><span class="o">(</span><span class="m">100</span><span class="w"> </span>Items<span class="o">)</span>
+
+<span class="o">[</span><span class="m">1</span><span class="o">]</span><span class="w"> </span>ID:<span class="w"> </span>S2B_1CDH_20191211_0_L2A<span class="w"> </span><span class="p">|</span><span class="w"> </span>Type:<span class="w"> </span>Item<span class="w"> </span><span class="p">|</span><span class="w"> </span>Cache<span class="w"> </span>🐌<span class="w"> </span><span class="p">|</span><span class="w"> </span>Setup:<span class="w"> </span><span class="m">125</span>.34ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>Exec:<span class="w">  </span><span class="m">2</span>.45ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>✅<span class="w"> </span>VALID
+<span class="o">[</span><span class="m">2</span><span class="o">]</span><span class="w"> </span>ID:<span class="w"> </span>S2B_1CDH_20191220_0_L2A<span class="w"> </span><span class="p">|</span><span class="w"> </span>Type:<span class="w"> </span>Item<span class="w"> </span><span class="p">|</span><span class="w"> </span>Cache<span class="w"> </span>⚡<span class="w"> </span><span class="p">|</span><span class="w"> </span>Setup:<span class="w">   </span><span class="m">0</span>.12ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>Exec:<span class="w">  </span><span class="m">1</span>.89ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>✅<span class="w"> </span>VALID
+<span class="o">[</span><span class="m">3</span><span class="o">]</span><span class="w"> </span>ID:<span class="w"> </span>S2B_1CDH_20191230_0_L2A<span class="w"> </span><span class="p">|</span><span class="w"> </span>Type:<span class="w"> </span>Item<span class="w"> </span><span class="p">|</span><span class="w"> </span>Cache<span class="w"> </span>⚡<span class="w"> </span><span class="p">|</span><span class="w"> </span>Setup:<span class="w">   </span><span class="m">0</span>.08ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>Exec:<span class="w">  </span><span class="m">2</span>.12ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>❌<span class="w"> </span>INVALID
+<span class="o">[</span><span class="m">4</span><span class="o">]</span><span class="w"> </span>ID:<span class="w"> </span>S2B_1CCV_20191029_0_L2A<span class="w"> </span><span class="p">|</span><span class="w"> </span>Type:<span class="w"> </span>Item<span class="w"> </span><span class="p">|</span><span class="w"> </span>Cache<span class="w"> </span>⚡<span class="w"> </span><span class="p">|</span><span class="w"> </span>Setup:<span class="w">   </span><span class="m">0</span>.09ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>Exec:<span class="w">  </span><span class="m">1</span>.95ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>✅<span class="w"> </span>VALID
+<span class="o">[</span><span class="m">5</span><span class="o">]</span><span class="w"> </span>ID:<span class="w"> </span>S2B_1CCV_20191128_0_L2A<span class="w"> </span><span class="p">|</span><span class="w"> </span>Type:<span class="w"> </span>Item<span class="w"> </span><span class="p">|</span><span class="w"> </span>Cache<span class="w"> </span>⚡<span class="w"> </span><span class="p">|</span><span class="w"> </span>Setup:<span class="w">   </span><span class="m">0</span>.07ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>Exec:<span class="w">  </span><span class="m">2</span>.03ms<span class="w"> </span><span class="p">|</span><span class="w"> </span>✅<span class="w"> </span>VALID
+...<span class="w"> </span>silencing<span class="w"> </span>output<span class="w"> </span><span class="k">for</span><span class="w"> </span>remaining<span class="w"> </span>items<span class="w"> </span><span class="o">(</span>validating<span class="w"> </span>at<span class="w"> </span>maximum<span class="w"> </span>speed<span class="o">)</span><span class="w"> </span>...
+
+<span class="o">=======================================================</span>
+📊<span class="w"> </span>VALIDATION<span class="w"> </span><span class="nv">SUMMARY</span>
+<span class="o">=======================================================</span>
+Total<span class="w"> </span>Objects<span class="w"> </span>Processed<span class="w"> </span>:<span class="w"> </span><span class="m">100</span>
+Valid<span class="w"> </span>Objects<span class="w">           </span>:<span class="w"> </span><span class="m">46</span>
+Invalid<span class="w"> </span>Objects<span class="w">         </span>:<span class="w"> </span><span class="m">54</span>
+-------------------------------------------------------
+Total<span class="w"> </span>Setup<span class="w"> </span>Time<span class="w">        </span>:<span class="w"> </span><span class="m">144</span>.35<span class="w"> </span>ms
+Total<span class="w"> </span>Execution<span class="w"> </span>Time<span class="w">    </span>:<span class="w"> </span><span class="m">25</span>.74<span class="w"> </span>ms
+Average<span class="w"> </span>Exec<span class="w"> </span>per<span class="w"> </span>Object<span class="w"> </span>:<span class="w"> </span><span class="m">0</span>.257<span class="w"> </span><span class="nv">ms</span>
+<span class="o">=======================================================</span>
+🚨<span class="w"> </span>ERROR<span class="w"> </span><span class="nv">BREAKDOWN</span>
+<span class="o">=======================================================</span>
+
+❌<span class="w"> </span>STAC<span class="w"> </span>Spec<span class="w"> </span>Violation:<span class="w"> </span>Missing<span class="w"> </span><span class="o">{</span><span class="s1">&#39;rel&#39;</span>:<span class="w"> </span><span class="s1">&#39;collection&#39;</span><span class="o">}</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>links<span class="w"> </span>array.
+<span class="w">   </span>Affected<span class="w"> </span>Items:<span class="w"> </span><span class="m">54</span>
+<span class="w">   </span>Examples:<span class="w">       </span>S2B_1CCV_20190102_0_L2A,<span class="w"> </span>S2B_1CCV_20190122_0_L2A,<span class="w"> </span>S2B_1CCV_20191029_0_L2A<span class="w"> </span>...<span class="w"> </span><span class="o">(</span>and<span class="w"> </span><span class="m">51</span><span class="w"> </span>more<span class="o">)</span>
+</pre></div>
+</div>
+<p><strong>Cache Indicators</strong></p>
+<ul class="simple">
+<li><p><strong>🐌 (Slow):</strong> First validation - schemas being fetched and compiled</p></li>
+<li><p><strong>⚡ (Lightning):</strong> Cached validator - instant execution using pre-compiled validator</p></li>
+</ul>
+<p><strong>Schema Caching &amp; Performance Improvement</strong></p>
+<p>The fast validator uses a multi-tier caching strategy that dramatically speeds up subsequent runs:</p>
+<ol class="arabic simple">
+<li><p><strong>First Run:</strong> Schemas are downloaded from the network and compiled with <code class="docutils literal notranslate"><span class="pre">fastjsonschema</span></code></p>
+<ul class="simple">
+<li><p>Setup time: 5-6 seconds (includes network fetch for all schemas + compilation)</p></li>
+<li><p>Per-item execution: 0.25ms</p></li>
+<li><p>Total for 100 items: ~5.4 seconds</p></li>
+<li><p>Total for 1000 items: ~10-11 seconds</p></li>
+</ul>
+</li>
+<li><p><strong>Subsequent Runs:</strong> Schemas are loaded from local disk cache (<code class="docutils literal notranslate"><span class="pre">.schemas/</span></code> directory)</p>
+<ul class="simple">
+<li><p>Setup time: 100-200ms (instant disk read + compilation from cache)</p></li>
+<li><p>Per-item execution: 0.25ms</p></li>
+<li><p>Total for 100 items: ~150-200ms</p></li>
+<li><p>Total for 1000 items: ~400-500ms (0.4-0.5 seconds)</p></li>
+<li><p><strong>Speedup: 20-25x faster</strong> compared to first run</p></li>
+</ul>
+</li>
+</ol>
+<p><strong>Cache Storage:</strong></p>
+<p>Schemas are automatically cached in <code class="docutils literal notranslate"><span class="pre">local_schemas/.schemas/</span></code> directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>local_schemas/
+└── .schemas/
+</pre></div>
+</div>
+<p>This means:</p>
+<ul class="simple">
+<li><p>✅ No network calls on subsequent validations</p></li>
+<li><p>✅ Instant schema availability across multiple runs</p></li>
+<li><p>✅ Persistent cache survives process restarts</p></li>
+<li><p>✅ Minimal disk space usage (schemas are typically &lt;100KB each)</p></li>
+</ul>
+<p><strong>Performance Characteristics</strong></p>
+<p>The fast validator is optimized for:</p>
+<ul class="simple">
+<li><p>Large FeatureCollections (100-100,000+ items)</p></li>
+<li><p>Memory-constrained environments (single-threaded, no multiprocessing)</p></li>
+<li><p>Rapid iteration during development</p></li>
+<li><p>CI/CD pipelines where speed and memory efficiency are critical</p></li>
+</ul>
+<p>Typical performance (subsequent runs with disk cache):</p>
+<ul class="simple">
+<li><p><strong>Setup time:</strong> 100-200ms (disk read + compilation from cached schemas)</p></li>
+<li><p><strong>Per-item execution:</strong> 0.23-0.25ms (compiled fastjsonschema validator)</p></li>
+<li><p><strong>Total time for 100 items:</strong> ~150-200ms</p></li>
+<li><p><strong>Total time for 1000 items:</strong> ~400-500ms (0.4-0.5 seconds)</p></li>
+<li><p><strong>Memory footprint:</strong> Single process, minimal overhead (vs. batch’s multiprocessing overhead)</p></li>
+</ul>
+<p><strong>Batch vs. Fast Comparison</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Metric</p></th>
+<th class="head"><p>Batch</p></th>
+<th class="head"><p>Fast</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Memory</p></td>
+<td><p>High (multiprocessing)</p></td>
+<td><p>Low (single-threaded)</p></td>
+</tr>
+<tr class="row-odd"><td><p>CPU cores</p></td>
+<td><p>All available</p></td>
+<td><p>Single core</p></td>
+</tr>
+<tr class="row-even"><td><p>Best for</p></td>
+<td><p>Large systems with many cores</p></td>
+<td><p>Memory-constrained or single-core systems</p></td>
+</tr>
+<tr class="row-odd"><td><p>FeatureCollections</p></td>
+<td><p>Excellent</p></td>
+<td><p>Excellent</p></td>
+</tr>
+<tr class="row-even"><td><p>Large datasets</p></td>
+<td><p>Excellent</p></td>
+<td><p>Good</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Python API</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.fast_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastValidator</span>
+
+<span class="c1"># Validate a file</span>
+<span class="n">validator</span> <span class="o">=</span> <span class="n">FastValidator</span><span class="p">(</span><span class="s2">&quot;item.json&quot;</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">validator</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># Check if valid</span>
+<span class="k">if</span> <span class="n">validator</span><span class="o">.</span><span class="n">valid</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;✅ Valid STAC&quot;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;❌ Invalid STAC&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Choosing the Right Command</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Use Case</p></th>
+<th class="head"><p>Command</p></th>
+<th class="head"><p>Why</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Single file validation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">validate</span></code></p></td>
+<td><p>Full feature set, detailed error messages, extensions support</p></td>
+</tr>
+<tr class="row-odd"><td><p>Large FeatureCollections (memory-constrained)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fast</span></code></p></td>
+<td><p>Batch-like speed, single-threaded, minimal memory overhead</p></td>
+</tr>
+<tr class="row-even"><td><p>Bulk validation (1000+ files, multi-core systems)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">batch</span></code></p></td>
+<td><p>Multiprocessing, utilizes all CPU cores, scales linearly</p></td>
+</tr>
+<tr class="row-odd"><td><p>Quick validation with detailed metrics</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fast</span></code></p></td>
+<td><p>Ultra-fast with fastjsonschema, timing info per item, auto-detection</p></td>
+</tr>
+<tr class="row-even"><td><p>CI/CD pipelines (memory-limited)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fast</span></code></p></td>
+<td><p>Fast, low memory, suitable for containers and serverless</p></td>
+</tr>
+<tr class="row-odd"><td><p>CI/CD pipelines (resource-rich)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">batch</span></code></p></td>
+<td><p>Parallelization, maximum throughput, consistent output</p></td>
+</tr>
+<tr class="row-even"><td><p>Development/testing</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fast</span></code></p></td>
+<td><p>Instant feedback, detailed metrics, minimal overhead</p></td>
+</tr>
+<tr class="row-odd"><td><p>Complex validation rules</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">validate</span></code></p></td>
+<td><p>Full control over validation options, recursive validation</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="python">
+<h3>Python<a class="headerlink" href="#python" title="Permalink to this heading"></a></h3>
+<p><strong>Single File Validation</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">stac_validator</span>
+
+<span class="c1"># Remote source</span>
+<span class="n">stac</span> <span class="o">=</span> <span class="n">stac_validator</span><span class="o">.</span><span class="n">StacValidate</span><span class="p">(</span><span class="s2">&quot;https://raw.githubusercontent.com/stac-utils/pystac/main/tests/data-files/examples/0.9.0/collection-spec/examples/landsat-collection.json&quot;</span><span class="p">)</span>
+<span class="n">stac</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stac</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+
+<span class="c1"># Local file</span>
+<span class="n">stac</span> <span class="o">=</span> <span class="n">stac_validator</span><span class="o">.</span><span class="n">StacValidate</span><span class="p">(</span><span class="s2">&quot;tests/test_data/1beta1/sentinel2.json&quot;</span><span class="p">,</span> <span class="n">extensions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">stac</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stac</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Dictionary Validation</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">stac_validator</span>
+
+<span class="n">stac</span> <span class="o">=</span> <span class="n">stac_validator</span><span class="o">.</span><span class="n">StacValidate</span><span class="p">()</span>
+<span class="n">stac</span><span class="o">.</span><span class="n">validate_dict</span><span class="p">(</span><span class="n">item_dict</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stac</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Batch Validation - List of Dictionaries</strong></p>
+<p>For validating dictionaries directly without managing temp files, use <code class="docutils literal notranslate"><span class="pre">validate_dicts()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.batch_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_dicts</span>
+
+<span class="n">items</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Feature&quot;</span><span class="p">,</span> <span class="s2">&quot;stac_version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.1.0&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+    <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Feature&quot;</span><span class="p">,</span> <span class="s2">&quot;stac_version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.1.0&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+    <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Feature&quot;</span><span class="p">,</span> <span class="s2">&quot;stac_version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.1.0&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+<span class="p">]</span>
+
+<span class="c1"># Validate all items concurrently (temp files handled internally)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">validate_dicts</span><span class="p">(</span><span class="n">items</span><span class="p">,</span> <span class="n">max_workers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Valid: </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;valid_stac&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid: </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;valid_stac&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Process results</span>
+<span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;valid_stac&quot;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ Valid&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ Invalid: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;errors&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">items</span></code> - List of STAC item dictionaries</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_workers</span></code> - CPU cores to use (None = auto-detect, positive int = specific cores, negative int = all minus N)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">show_progress</span></code> - Display progress bar (default: True)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chunk_size</span></code> - Number of items to process at a time to bound disk and memory usage (default: 1000)</p></li>
+</ul>
+<p><strong>Batch Validation - FeatureCollection (Concurrent with Multiprocessing)</strong></p>
+<p>For FeatureCollection validation with multiprocessing, use <code class="docutils literal notranslate"><span class="pre">validate_concurrently()</span></code> with <code class="docutils literal notranslate"><span class="pre">feature_collection=True</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.batch_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_concurrently</span>
+
+<span class="c1"># Validate FeatureCollection files directly (10-100x faster for large collections)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">validate_concurrently</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;collection1.json&quot;</span><span class="p">,</span> <span class="s2">&quot;collection2.json&quot;</span><span class="p">],</span>
+    <span class="n">feature_collection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Expand and validate each feature</span>
+    <span class="n">max_workers</span><span class="o">=</span><span class="kc">None</span>  <span class="c1"># Auto-detect cores</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total features: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Valid: </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;valid_stac&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid: </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;valid_stac&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Process results</span>
+<span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;valid_stac&quot;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ Feature valid&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ Feature invalid: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;errors&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Batch Validation - Multiple Files</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.batch_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_concurrently</span>
+
+<span class="n">files</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;item1.json&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;item2.json&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;item3.json&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Validate files concurrently using all available CPU cores</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">validate_concurrently</span><span class="p">(</span>
+    <span class="n">files</span><span class="p">,</span>
+    <span class="n">max_workers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Auto-detect cores</span>
+    <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="c1"># Process results</span>
+<span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;valid_stac&quot;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;errors&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Batch Validation - FeatureCollection Files</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.batch_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_concurrently</span>
+
+<span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;collection1.json&quot;</span><span class="p">,</span> <span class="s2">&quot;collection2.json&quot;</span><span class="p">]</span>
+
+<span class="c1"># Validate FeatureCollections by extracting and validating each feature</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">validate_concurrently</span><span class="p">(</span>
+    <span class="n">files</span><span class="p">,</span>
+    <span class="n">feature_collection</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_workers</span><span class="o">=</span><span class="mi">8</span>
+<span class="p">)</span>
+
+<span class="c1"># Results show feature index: &quot;collection1.json[0]&quot;, &quot;collection1.json[1]&quot;, etc.</span>
+<span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">&#39;✅&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;valid_stac&#39;</span><span class="p">]</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;❌&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Item Collection Validation</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">stac_validator</span>
+
+<span class="n">stac</span> <span class="o">=</span> <span class="n">stac_validator</span><span class="o">.</span><span class="n">StacValidate</span><span class="p">()</span>
+<span class="n">stac</span><span class="o">.</span><span class="n">validate_item_collection_dict</span><span class="p">(</span><span class="n">item_collection_dict</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stac</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Fast Validation (High-Speed with Local Caching)</strong></p>
+<p>For large FeatureCollections or when you need maximum speed with minimal memory overhead:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.fast_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastValidator</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="c1"># Validate a FeatureCollection or single STAC object</span>
+<span class="n">fv</span> <span class="o">=</span> <span class="n">FastValidator</span><span class="p">(</span><span class="s2">&quot;large_collection.json&quot;</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">fv</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># Access validation results via the message attribute</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">fv</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+
+<span class="c1"># Example output:</span>
+<span class="c1"># {</span>
+<span class="c1">#   &quot;path&quot;: &quot;large_collection.json&quot;,</span>
+<span class="c1">#   &quot;valid_stac&quot;: true,</span>
+<span class="c1">#   &quot;stac_versions&quot;: [&quot;1.0.0&quot;, &quot;1.1.0&quot;],</span>
+<span class="c1">#   &quot;schemas_checked&quot;: [</span>
+<span class="c1">#     &quot;https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json&quot;,</span>
+<span class="c1">#     &quot;https://schemas.stacspec.org/v1.1.0/item-spec/json-schema/item.json&quot;,</span>
+<span class="c1">#     &quot;https://stac-extensions.github.io/projection/v1.0.0/schema.json&quot;</span>
+<span class="c1">#   ],</span>
+<span class="c1">#   &quot;total_objects&quot;: 1000,</span>
+<span class="c1">#   &quot;valid_objects&quot;: 998,</span>
+<span class="c1">#   &quot;invalid_objects&quot;: 2,</span>
+<span class="c1">#   &quot;setup_time_ms&quot;: 145.32,</span>
+<span class="c1">#   &quot;execution_time_ms&quot;: 245.67,</span>
+<span class="c1">#   &quot;errors&quot;: [</span>
+<span class="c1">#     {</span>
+<span class="c1">#       &quot;error_message&quot;: &quot;STAC Spec Violation: Missing {&#39;rel&#39;: &#39;collection&#39;} in links array.&quot;,</span>
+<span class="c1">#       &quot;affected_items&quot;: [&quot;item_1&quot;, &quot;item_2&quot;],</span>
+<span class="c1">#       &quot;count&quot;: 2</span>
+<span class="c1">#     }</span>
+<span class="c1">#   ]</span>
+<span class="c1"># }</span>
+
+<span class="c1"># Check validity</span>
+<span class="k">if</span> <span class="n">fv</span><span class="o">.</span><span class="n">valid</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ All </span><span class="si">{</span><span class="n">fv</span><span class="o">.</span><span class="n">message</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;valid_objects&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> items are valid&quot;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ </span><span class="si">{</span><span class="n">fv</span><span class="o">.</span><span class="n">message</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;invalid_objects&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> items failed validation&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">error</span> <span class="ow">in</span> <span class="n">fv</span><span class="o">.</span><span class="n">message</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;errors&#39;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">error</span><span class="p">[</span><span class="s1">&#39;error_message&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="p">[</span><span class="s1">&#39;count&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> items affected&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Configure Schema Cache Size</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">stac_validator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_schema_cache_size</span>
+
+<span class="c1"># Set once at app startup (process-wide)</span>
+<span class="n">set_schema_cache_size</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>  <span class="c1"># use 0 to disable caching</span>
+
+<span class="n">stac</span> <span class="o">=</span> <span class="n">stac_validator</span><span class="o">.</span><span class="n">StacValidate</span><span class="p">()</span>
+<span class="n">stac</span><span class="o">.</span><span class="n">validate_dict</span><span class="p">(</span><span class="n">dictionary</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stac</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="schema-cache-settings">
+<h3>Schema Cache Settings<a class="headerlink" href="#schema-cache-settings" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Default schema cache size is 16 entries.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">--schema-cache-size</span></code> in the CLI or <code class="docutils literal notranslate"><span class="pre">set_schema_cache_size(...)</span></code> in Python to override it.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">0</span></code> to disable schema caching.</p></li>
+</ul>
+<p>Use <code class="docutils literal notranslate"><span class="pre">set_schema_cache_size</span></code> once at application startup:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stac_validator.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_schema_cache_size</span>
+
+<span class="c1"># Examples:</span>
+<span class="n">set_schema_cache_size</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>  <span class="c1"># small cache for low-memory deployments</span>
+<span class="n">set_schema_cache_size</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>  <span class="c1"># moderate cache for long-running services</span>
+<span class="n">set_schema_cache_size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>   <span class="c1"># disable schema caching</span>
+</pre></div>
+</div>
+<p>Notes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">StacValidate()</span></code> and <code class="docutils literal notranslate"><span class="pre">validate_dict()</span></code> do not accept a cache-size parameter.</p></li>
+<li><p>Changing cache size at runtime replaces the cache instance and drops existing cached entries.</p></li>
+<li><p>In multi-worker deployments, configure cache size in each worker process.</p></li>
+</ul>
+</section>
+</section>
+<section id="performance-benchmarking">
+<h2>Performance Benchmarking<a class="headerlink" href="#performance-benchmarking" title="Permalink to this heading"></a></h2>
+<p>A benchmark script is included to compare the performance of batch validation vs legacy item-collection validation. This is useful for understanding the performance improvements of the multiprocessing batch validator.</p>
+<section id="running-the-benchmark">
+<h3>Running the Benchmark<a class="headerlink" href="#running-the-benchmark" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Test with 10,000 items (default)</span>
+python<span class="w"> </span>benchmark_validation.py
+
+<span class="c1"># Test with custom number of items</span>
+python<span class="w"> </span>benchmark_validation.py<span class="w"> </span>--items<span class="w"> </span><span class="m">5000</span>
+python<span class="w"> </span>benchmark_validation.py<span class="w"> </span>--items<span class="w"> </span><span class="m">50000</span>
+
+<span class="c1"># Run only batch validation (skip slow legacy validation)</span>
+python<span class="w"> </span>benchmark_validation.py<span class="w"> </span>--items<span class="w"> </span><span class="m">10000</span><span class="w"> </span>--batch-only
+
+<span class="c1"># Run only legacy validation</span>
+python<span class="w"> </span>benchmark_validation.py<span class="w"> </span>--items<span class="w"> </span><span class="m">10000</span><span class="w"> </span>--legacy-only
+
+<span class="c1"># View all options</span>
+python<span class="w"> </span>benchmark_validation.py<span class="w"> </span>--help
+</pre></div>
+</div>
+</section>
+<section id="example-output">
+<h3>Example Output<a class="headerlink" href="#example-output" title="Permalink to this heading"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>======================================================================
+BENCHMARK RESULTS
+======================================================================
+Items tested: 10000
+
+Batch Validation (multiprocessing):
+  Time: 22.43s
+  ✅ Valid: 0
+  ❌ Invalid: 10000
+
+Legacy Validation (single-threaded):
+  Time: 131.62s
+  ✅ Valid: 0
+  ❌ Invalid: 10000
+
+======================================================================
+Speedup: 5.9x faster with batch validation
+Time saved: 109.19s
+</pre></div>
+</div>
+</section>
+<section id="interpreting-results">
+<h3>Interpreting Results<a class="headerlink" href="#interpreting-results" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Speedup Factor</strong>: Shows how many times faster batch validation is compared to legacy validation</p></li>
+<li><p><strong>Time Saved</strong>: The absolute time difference in seconds</p></li>
+<li><p><strong>CPU Cores Used</strong>: Number of CPU cores utilized by batch validation (typically all available cores)</p></li>
+</ul>
+<p>The batch validator’s multiprocessing approach provides significant performance improvements, especially for large datasets. The speedup factor varies based on:</p>
+<ul class="simple">
+<li><p>Number of CPU cores available</p></li>
+<li><p>Size of the dataset</p></li>
+<li><p>Complexity of validation (extensions, custom schemas, etc.)</p></li>
+</ul>
+</section>
+</section>
+<section id="deployment">
+<h2>Deployment<a class="headerlink" href="#deployment" title="Permalink to this heading"></a></h2>
+<section id="docker">
+<h3>Docker<a class="headerlink" href="#docker" title="Permalink to this heading"></a></h3>
+<p>The validator can run using docker containers.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>stac-validator<span class="w"> </span>.
+$<span class="w"> </span>docker<span class="w"> </span>run<span class="w"> </span>stac-validator<span class="w"> </span>https://raw.githubusercontent.com/stac-extensions/projection/main/examples/item.json
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/stac-extensions/projection/main/examples/item.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/projection/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span>true,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;ITEM&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;default&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="aws-cdk">
+<h3>AWS (CDK)<a class="headerlink" href="#aws-cdk" title="Permalink to this heading"></a></h3>
+<p>An example <a class="reference external" href="https://aws.amazon.com/cdk/">AWS CDK</a> deployment is available in <a class="reference internal" href="#./cdk-deployment/README.md"><span class="xref myst">cdk-deployment</span></a></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>cdk-deployment
+$<span class="w"> </span>cdk<span class="w"> </span>diff
+</pre></div>
+</div>
+</section>
+</section>
+<section id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Permalink to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span><span class="nb">test</span>
+<span class="c1"># or</span>
+$<span class="w"> </span>pytest<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>See the <a class="reference internal" href="#./tests/test_stac_validator.py"><span class="xref myst">tests</span></a> files for examples on different usages.</p>
+</section>
+<section id="additional-examples">
+<h2>Additional Examples<a class="headerlink" href="#additional-examples" title="Permalink to this heading"></a></h2>
+<section id="core">
+<h3>–core<a class="headerlink" href="#core" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://raw.githubusercontent.com/radiantearth/stac-spec/master/examples/extended-item.json<span class="w"> </span>--core
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/radiantearth/stac-spec/master/examples/extended-item.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span>true,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;ITEM&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;core&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="custom">
+<h3>–custom<a class="headerlink" href="#custom" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://radarstac.s3.amazonaws.com/stac/catalog.json<span class="w"> </span>--custom<span class="w"> </span>https://cdn.staclint.com/v0.7.0/catalog.json
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;0.7.0&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://radarstac.s3.amazonaws.com/stac/catalog.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;https://cdn.staclint.com/v0.7.0/catalog.json&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;CATALOG&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;custom&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span><span class="nb">true</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="extensions">
+<h3>–extensions<a class="headerlink" href="#extensions" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://raw.githubusercontent.com/radiantearth/stac-spec/master/examples/extended-item.json<span class="w"> </span>--extensions
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/radiantearth/stac-spec/master/examples/extended-item.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/eo/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/projection/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/scientific/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/view/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/remote-data/v1.0.0/schema.json&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span>true,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;ITEM&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;extensions&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="recursive">
+<h3>–recursive<a class="headerlink" href="#recursive" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://spot-canada-ortho.s3.amazonaws.com/catalog.json<span class="w"> </span>--recursive<span class="w"> </span>--max-depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>--trace-recursion
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;0.8.1&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://canada-spot-ortho.s3.amazonaws.com/canada_spot_orthoimages/canada_spot4_orthoimages/collection.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://cdn.staclint.com/v0.8.1/collection.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;COLLECTION&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;recursive&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span><span class="nb">true</span>
+<span class="w">    </span><span class="o">}</span>,
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;0.8.1&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://canada-spot-ortho.s3.amazonaws.com/canada_spot_orthoimages/canada_spot5_orthoimages/collection.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://cdn.staclint.com/v0.8.1/collection.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;COLLECTION&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;recursive&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span><span class="nb">true</span>
+<span class="w">    </span><span class="o">}</span>,
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;0.8.1&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://spot-canada-ortho.s3.amazonaws.com/catalog.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://cdn.staclint.com/v0.8.1/catalog.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;CATALOG&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;recursive&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span><span class="nb">true</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="item-collection">
+<h3>–item-collection<a class="headerlink" href="#item-collection" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a/items<span class="w"> </span>--item-collection<span class="w"> </span>--pages<span class="w"> </span><span class="m">2</span>
+</pre></div>
+</div>
+</section>
+<section id="header">
+<h3>–header<a class="headerlink" href="#header" title="Permalink to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://stac-catalog.eu/collections/sentinel-s2-l2a/items<span class="w"> </span>--header<span class="w"> </span>x-api-key<span class="w"> </span><span class="nv">$MY_API_KEY</span><span class="w"> </span>--header<span class="w"> </span>foo<span class="w"> </span>bar
+</pre></div>
+</div>
+</section>
+<section id="schema-map">
+<h3>–schema-map<a class="headerlink" href="#schema-map" title="Permalink to this heading"></a></h3>
+<p>Schema map allows stac-validator to replace a schema in a STAC json by a schema from another URL or local schema file.
+This is especially useful when developing a schema and testing validation against your local copy of the schema.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://raw.githubusercontent.com/radiantearth/stac-spec/v1.0.0/examples/extended-item.json<span class="w"> </span>--extensions<span class="w"> </span>--schema-map<span class="w"> </span>https://stac-extensions.github.io/projection/v1.0.0/schema.json<span class="w"> </span><span class="s2">&quot;tests/test_data/schema/v1.0.0/projection.json&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/radiantearth/stac-spec/v1.0.0/examples/extended-item.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/eo/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;tests/test_data/schema/v1.0.0/projection.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/scientific/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/view/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/remote-data/v1.0.0/schema.json&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span>true,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;ITEM&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;extensions&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+<p>This option is also capable of replacing URLs to subschemas:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>tests/test_data/v100/extended-item-local.json<span class="w"> </span>--custom<span class="w"> </span>tests/test_data/schema/v1.0.0/item_with_unreachable_url.json<span class="w"> </span>--schema-map<span class="w"> </span>https://geojson-wrong-url.org/schema/Feature.json<span class="w"> </span>https://geojson.org/schema/Feature.json<span class="w"> </span>--schema-map<span class="w"> </span>https://geojson-wrong-url.org/schema/Geometry.json<span class="w"> </span>https://geojson.org/schema/Geometry.json
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;tests/test_data/v100/extended-item-local.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;tests/test_data/schema/v1.0.0/item_with_unreachable_url.json&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span>true,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;ITEM&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;custom&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="schema-config">
+<h3>–schema-config<a class="headerlink" href="#schema-config" title="Permalink to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">--schema-config</span></code> option allows you to specify a YAML or JSON configuration file that maps remote schema URLs to local file paths. This is useful when you need to validate against multiple local schemas and want to avoid using multiple <code class="docutils literal notranslate"><span class="pre">--schema-map</span></code> arguments.</p>
+<p>Example schema config file (YAML):</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">schemas</span><span class="p">:</span>
+<span class="w">  </span><span class="s">&quot;https://schemas.stacspec.org/v1.0.0/collection-spec/json-schema/collection.json&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;local_schemas/v1.0.0/collection.json&quot;</span>
+<span class="w">  </span><span class="s">&quot;https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;local_schemas/v1.0.0/item.json&quot;</span>
+<span class="w">  </span><span class="s">&quot;https://stac-extensions.github.io/eo/v1.0.0/schema.json&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;local_schemas/v1.0.0/eo.json&quot;</span>
+</pre></div>
+</div>
+<p>Usage:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://raw.githubusercontent.com/radiantearth/stac-spec/v1.0.0/examples/extended-item.json<span class="w"> </span>--schema-config<span class="w"> </span>path/to/schema_config.yaml
+</pre></div>
+</div>
+<p>The paths in the config file can be absolute or relative to the config file’s location.</p>
+</section>
+<section id="pydantic">
+<h3>–pydantic<a class="headerlink" href="#pydantic" title="Permalink to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">--pydantic</span></code> option provides enhanced validation using stac-pydantic models, which offer stronger type checking and more detailed error messages. To use this feature, you need to install the optional dependency:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>stac-valid<span class="o">[</span>pydantic<span class="o">]</span>
+</pre></div>
+</div>
+<p>Then you can validate your STAC objects using Pydantic models:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>stac-validator<span class="w"> </span>https://raw.githubusercontent.com/radiantearth/stac-spec/master/examples/extended-item.json<span class="w"> </span>--pydantic
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">        </span><span class="s2">&quot;version&quot;</span>:<span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;path&quot;</span>:<span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/radiantearth/stac-spec/master/examples/extended-item.json&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;schema&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;stac-pydantic Item model&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;valid_stac&quot;</span>:<span class="w"> </span>true,
+<span class="w">        </span><span class="s2">&quot;asset_type&quot;</span>:<span class="w"> </span><span class="s2">&quot;ITEM&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;validation_method&quot;</span>:<span class="w"> </span><span class="s2">&quot;pydantic&quot;</span>,
+<span class="w">        </span><span class="s2">&quot;extension_schemas&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/eo/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/projection/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/scientific/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/view/v1.0.0/schema.json&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;https://stac-extensions.github.io/remote-data/v1.0.0/schema.json&quot;</span>
+<span class="w">        </span><span class="o">]</span>,
+<span class="w">        </span><span class="s2">&quot;model_validation&quot;</span>:<span class="w"> </span><span class="s2">&quot;passed&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+</section>
+<p>For more detailed documentation, please see the following pages:</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validator.html">Validate API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities API Reference</a></li>
+</ul>
+</div>
+<section id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cli.html" class="btn btn-neutral float-right" title="CLI API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Jonathan Healy.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
