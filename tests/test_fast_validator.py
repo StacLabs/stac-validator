@@ -1,8 +1,12 @@
 import json
+import threading
+import time
+from concurrent.futures import Future
 
 import pytest
 
-from stac_validator.fast_validator import FastValidator
+from stac_validator import fast_validator
+from stac_validator.fast_validator import FastSTACMultiValidationError, FastValidator
 
 
 @pytest.fixture
@@ -1078,3 +1082,174 @@ class TestFastValidatorPerformance:
             assert "count" in error
             assert isinstance(error["affected_items"], list)
             assert error["count"] == len(error["affected_items"])
+
+
+def _item_schema_uri(version):
+    return f"https://schemas.stacspec.org/v{version}/item-spec/json-schema/item.json"
+
+
+def _prefill_item_schema(version):
+    fast_validator.SCHEMA_CACHE[_item_schema_uri(version)] = {
+        "type": "object",
+        "required": ["id"],
+    }
+
+
+def _run_in_threads(targets):
+    """Run each callable in its own thread; return its result or the exception it raised."""
+    results = [None] * len(targets)
+
+    def run(index, target):
+        try:
+            results[index] = target()
+        except Exception as e:
+            results[index] = e
+
+    # Daemon threads and one shared deadline: a stuck waiter fails the test, not the run.
+    threads = [
+        threading.Thread(target=run, args=(index, target), daemon=True)
+        for index, target in enumerate(targets)
+    ]
+    for thread in threads:
+        thread.start()
+    deadline = time.monotonic() + 30
+    for thread in threads:
+        thread.join(max(0, deadline - time.monotonic()))
+    assert not any(thread.is_alive() for thread in threads), "worker threads hung"
+    return results
+
+
+@pytest.fixture
+def fake_version():
+    """Return unique fake STAC versions and drop their cached schemas and validators."""
+    versions = []
+
+    def make(name):
+        version = f"0.0.0-singleflight-{name}"
+        versions.append(version)
+        return version
+
+    yield make
+    for version in versions:
+        fast_validator.SCHEMA_CACHE.pop(_item_schema_uri(version), None)
+        fast_validator.VALIDATOR_CACHE.pop(("Item", version, ()), None)
+
+
+class TestGetValidatorConcurrency:
+    """Concurrent cold get_validator calls build each cache key once."""
+
+    def test_get_validator_compiles_once_under_concurrency(
+        self, fake_version, monkeypatch
+    ):
+        version = fake_version("same-key")
+        _prefill_item_schema(version)
+        compile_calls = []
+        original_compile = fast_validator.compile_unrolled_schema
+
+        def counting_compile(schema, quiet=False):
+            compile_calls.append(schema)
+            time.sleep(0.05)  # widen the race window
+            return original_compile(schema, quiet=quiet)
+
+        monkeypatch.setattr(fast_validator, "compile_unrolled_schema", counting_compile)
+        start = threading.Barrier(20)
+
+        def call():
+            start.wait(timeout=5)
+            validator, was_cached = fast_validator.get_validator(
+                "Item", version, [], quiet=True
+            )
+            validator({"id": "x"})
+            return validator, was_cached
+
+        results = _run_in_threads([call] * 20)
+
+        assert [r for r in results if isinstance(r, Exception)] == []
+        assert len(compile_calls) == 1
+        assert len({id(validator) for validator, _ in results}) == 1
+        assert [was_cached for _, was_cached in results].count(False) == 1
+        with pytest.raises(FastSTACMultiValidationError):
+            results[0][0]({})
+
+    def test_get_validator_compiles_different_keys_in_parallel(
+        self, fake_version, monkeypatch
+    ):
+        versions = [fake_version("parallel-a"), fake_version("parallel-b")]
+        for version in versions:
+            _prefill_item_schema(version)
+        both_compiling = threading.Event()
+        rendezvous = threading.Barrier(2, action=both_compiling.set)
+        original_compile = fast_validator.compile_unrolled_schema
+
+        def compile_together(schema, quiet=False):
+            # Tier 1's fallback swallows a BrokenBarrierError, so the event is the check.
+            rendezvous.wait(timeout=5)
+            return original_compile(schema, quiet=quiet)
+
+        monkeypatch.setattr(fast_validator, "compile_unrolled_schema", compile_together)
+
+        results = _run_in_threads(
+            [
+                lambda v=version: fast_validator.get_validator(
+                    "Item", v, [], quiet=True
+                )
+                for version in versions
+            ]
+        )
+
+        assert [r for r in results if isinstance(r, Exception)] == []
+        assert both_compiling.is_set()
+
+    def test_get_validator_shares_build_failure_then_retries(
+        self, fake_version, monkeypatch
+    ):
+        version = fake_version("failure")
+        workers = 20
+        arrived = threading.Condition()
+        arrivals = 0
+        fetch_calls = []
+
+        def arrive():
+            nonlocal arrivals
+            with arrived:
+                arrivals += 1
+                arrived.notify_all()
+
+        class CountingFuture(Future):
+            def result(self, timeout=None):
+                arrive()
+                return super().result(timeout=10)
+
+        def failing_fetch(uri, quiet=False):
+            fetch_calls.append(uri)
+            arrive()
+            # Fail only once every worker is either fetching or waiting on the build.
+            with arrived:
+                arrived.wait_for(lambda: arrivals == workers, timeout=5)
+            raise RuntimeError("schema fetch failed")
+
+        # get_validator creates in-flight builds from this module-level name.
+        monkeypatch.setattr(fast_validator, "Future", CountingFuture)
+        monkeypatch.setattr(fast_validator, "fetch_schema", failing_fetch)
+        start = threading.Barrier(workers)
+
+        def call():
+            start.wait(timeout=5)
+            return fast_validator.get_validator("Item", version, [], quiet=True)
+
+        results = _run_in_threads([call] * workers)
+
+        assert all(
+            isinstance(r, RuntimeError) and str(r) == "schema fetch failed"
+            for r in results
+        ), results
+        assert len(fetch_calls) == 1
+        assert fast_validator.VALIDATOR_BUILDS == {}
+
+        monkeypatch.undo()
+        _prefill_item_schema(version)
+        validator, was_cached = fast_validator.get_validator(
+            "Item", version, [], quiet=True
+        )
+        assert was_cached is False
+        validator({"id": "x"})

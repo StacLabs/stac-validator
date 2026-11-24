@@ -8,7 +8,7 @@ import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import click
 import fastjsonschema  # type: ignore
@@ -134,6 +134,8 @@ def get_cache_directory() -> str:
 # --- Thread-Safe Caches & Lock ---
 SCHEMA_CACHE: Dict[str, Any] = {}
 VALIDATOR_CACHE: Dict[Any, Any] = {}
+# Builds in progress, so concurrent callers for the same key wait for one compile
+VALIDATOR_BUILDS: Dict[Any, Future] = {}
 CACHE_LOCK = threading.Lock()
 # Dynamically determine writable cache directory across environments
 LOCAL_SCHEMA_DIR = get_cache_directory()
@@ -464,11 +466,39 @@ def get_validator(
     ext_key = tuple(sorted(extensions))
     cache_key = (stac_type, stac_version, ext_key)
 
-    # Thread-safe Cache Read
+    # Thread-safe Cache Read; join the in-flight build for this key if there is one
     with CACHE_LOCK:
         if cache_key in VALIDATOR_CACHE:
             return VALIDATOR_CACHE[cache_key], True
+        build = VALIDATOR_BUILDS.get(cache_key)
+        is_builder = build is None
+        if build is None:
+            build = VALIDATOR_BUILDS[cache_key] = Future()
 
+    if not is_builder:
+        # Another thread is building this key: share its validator or its exception.
+        return build.result(), True
+
+    try:
+        validator = _build_validator(stac_type, stac_version, extensions, quiet)
+    except BaseException as e:
+        with CACHE_LOCK:
+            del VALIDATOR_BUILDS[cache_key]
+        build.set_exception(e)
+        raise
+
+    # Cache the resulting validator so future items use it instantly (Thread-safe Write)
+    with CACHE_LOCK:
+        VALIDATOR_CACHE[cache_key] = validator
+        del VALIDATOR_BUILDS[cache_key]
+    build.set_result(validator)
+    return validator, False
+
+
+def _build_validator(
+    stac_type: str, stac_version: str, extensions: List[str], quiet: bool
+) -> Callable[[Dict[str, Any]], None]:
+    """Fetches and compiles the base and extension schemas into one validator."""
     # Determine base schema URI
     stac_type_lower = stac_type.lower()
     if stac_type_lower in ["item", "feature"]:
@@ -663,10 +693,7 @@ def get_validator(
         if collected_errors:
             raise FastSTACMultiValidationError(collected_errors)
 
-    # Cache the resulting validator so future items use it instantly (Thread-safe Write)
-    with CACHE_LOCK:
-        VALIDATOR_CACHE[cache_key] = validator
-    return validator, False
+    return validator
 
 
 class FastValidator:

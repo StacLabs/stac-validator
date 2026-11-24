@@ -6,6 +6,10 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Concurrent Validator Compilation**: `get_validator()` now builds each (type, version, extensions) key once. Concurrent callers for the same uncached key wait for that build and share its validator or its error, instead of each recompiling it, which stalled cold multi-threaded servers.
+
 ## [v4.6.1] - 2026-09-04
 
 ### Fixed
