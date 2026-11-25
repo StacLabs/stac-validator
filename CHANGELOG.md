@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+## [v4.6.3] - 2026-11-25
+
+### Changed
+
+- **PyPI Rename Alias**: Releases now also publish a `stac-validator` stub distribution that depends on `stac-valid`, so `pip install stac-validator` installs the renamed package automatically.
+
 ## [v4.6.2] - 2026-11-25
 
 ### Fixed
@@ -512,7 +520,9 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - With the newest version - 1.0.0-beta.2 - items will run through jsonchema validation before the PySTAC validation. The reason for this is that jsonschema will give more informative error messages. This should be addressed better in the future. This is not the case with the --recursive option as time can be a concern here with larger collections.
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
-[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.6.1..main
+[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.6.3..main
+[v4.6.3]: https://github.com/sparkgeo/stac-validator/compare/v4.6.2..v4.6.3
+[v4.6.2]: https://github.com/sparkgeo/stac-validator/compare/v4.6.1..v4.6.2
 [v4.6.1]: https://github.com/sparkgeo/stac-validator/compare/v4.6.0..v4.6.1
 [v4.6.0]: https://github.com/sparkgeo/stac-validator/compare/v4.5.2..v4.6.0
 [v4.5.2]: https://github.com/sparkgeo/stac-validator/compare/v4.5.1..v4.5.2
