@@ -14,16 +14,10 @@ repos:
       - id: black
         # language_version: python3.11
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v2.4.1
     hooks:
       - id: mypy
         exclude: /tests/
-        # --strict
-        args:
-          [
-            --no-strict-optional,
-            --ignore-missing-imports,
-            --implicit-reexport,
-            --explicit-package-bases,
-          ]
-        additional_dependencies: ["types-attrs", "types-requests"]
+        # mypy options live in pyproject.toml [tool.mypy] so `mypy stac_validator/`
+        # (as run in CI) and this hook use identical settings
+        additional_dependencies: ["types-attrs", "types-requests", "types-PyYAML", "types-jsonschema", "types-tqdm"]
