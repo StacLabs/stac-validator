@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stac_valid"
-version = "4.6.1"
+version = "4.6.2"
 description = "A package to validate STAC files"
 authors = [
     {name = "Jonathan Healy", email = "jon@healy-hyperspatial.dev"},
@@ -43,7 +43,7 @@ dev = [
     "requests-mock",
     "types-setuptools",
     "stac-pydantic>=3.3.0",
-    "mypy",
+    "mypy==2.4.1",
     "types-attrs",
     "types-requests",
     "types-jsonschema",
@@ -64,6 +64,13 @@ Repository = "https://github.com/stac-utils/stac-validator"
 [project.readme]
 file = "README.md"
 content-type = "text/markdown"
+
+[tool.mypy]
+strict_optional = false
+ignore_missing_imports = true
+implicit_reexport = true
+explicit_package_bases = true
+exclude = "^tests/"
 
 [tool.setuptools]
 packages = ["stac_validator"]

@@ -135,7 +135,7 @@ def get_cache_directory() -> str:
 SCHEMA_CACHE: Dict[str, Any] = {}
 VALIDATOR_CACHE: Dict[Any, Any] = {}
 # Builds in progress, so concurrent callers for the same key wait for one compile
-VALIDATOR_BUILDS: Dict[Any, Future] = {}
+VALIDATOR_BUILDS: Dict[Any, "Future[Any]"] = {}
 CACHE_LOCK = threading.Lock()
 # Dynamically determine writable cache directory across environments
 LOCAL_SCHEMA_DIR = get_cache_directory()
