@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Alias distribution published to the legacy `stac-validator` PyPI project so
+# `pip install stac-validator` resolves to `stac-valid`. __VERSION__ is
+# substituted from the git tag by .github/workflows/publish.yml — building
+# this directory directly (without substitution) will fail on purpose.
+[project]
+name = "stac-validator"
+version = "__VERSION__"
+description = "Alias package: this project has been renamed to stac-valid. Installing it installs stac-valid."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Jonathan Healy", email = "jon@healy-hyperspatial.dev"}
+]
+maintainers = [
+    {name = "Jonathan Healy", email = "jon@healy-hyperspatial.dev"},
+    {name = "Healy Hyperspatial"}
+]
+requires-python = ">=3.8"
+dependencies = ["stac-valid==__VERSION__"]
+
+[project.urls]
+Homepage = "https://github.com/StacLabs/stac-validator"
+Repository = "https://github.com/StacLabs/stac-validator"
+
+[tool.setuptools]
+packages = []

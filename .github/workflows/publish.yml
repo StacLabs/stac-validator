@@ -27,9 +27,21 @@ jobs:
         run: |
           python -m build
 
+      # Also publish a stub to the legacy `stac-validator` PyPI project so
+      # `pip install stac-validator` pulls in stac-valid (see alias/).
+      - name: Build stac-validator alias package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i "s/__VERSION__/$VERSION/g" alias/pyproject.toml
+          python -m build alias --outdir dist
+
       - name: Publish package to PyPI
         env:
           TWINE_USERNAME: "__token__"
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          twine upload dist/*
+          # PYPI_API_TOKEN must be valid for BOTH projects — use an
+          # account-scoped token, or split this into two steps with a second
+          # secret if the token is scoped to stac-valid only.
+          twine upload dist/stac_valid-*
+          twine upload dist/stac_validator-*
