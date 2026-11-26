@@ -6,6 +6,11 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Recursive Validation Aborts on Invalid Items**: `recursive_validator` no longer aborts the whole walk when a linked `item` fails validation. Item failures are now recorded per-item with the same structured error shape used for `child` links, and remaining links are still validated.
+- **Item Validity Ignored in Recursive Result**: recursive validation now folds `item` link results into the overall `valid` outcome alongside `child` results, so an invalid linked item correctly fails the run.
+
 ## [v4.6.3] - 2026-11-25
 
 ### Changed
