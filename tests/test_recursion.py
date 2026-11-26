@@ -303,6 +303,9 @@ def test_recursion_with_bad_item():
                 "https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json"
             ],
             "valid_stac": False,
+            "asset_type": "ITEM",
+            "validation_method": "recursive",
+            "validator_engine": "jsonschema",
             "error_type": "JSONSchemaValidationError",
             "failed_schema": "https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json",
             "error_message": "'id' is a required property",
@@ -312,11 +315,13 @@ def test_recursion_with_bad_item():
 
 
 def test_recursion_with_bad_item_trace_recursion():
+    # The catalog links an invalid item first and a valid item second — the
+    # walk must continue past the failure and validate both.
     stac_file = "tests/test_data/v100/catalog-with-bad-item.json"
     stac = stac_validator.StacValidate(stac_file, recursive=True, trace_recursion=True)
     stac.run()
     assert not stac.valid
-    assert len(stac.message) == 2
+    assert len(stac.message) == 3
     assert stac.message == [
         {
             "version": "1.0.0",
@@ -336,10 +341,26 @@ def test_recursion_with_bad_item_trace_recursion():
                 "https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json"
             ],
             "valid_stac": False,
+            "asset_type": "ITEM",
+            "validation_method": "recursive",
+            "validator_engine": "jsonschema",
             "error_type": "JSONSchemaValidationError",
             "failed_schema": "https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json",
             "error_message": "'id' is a required property",
             "recommendation": "For more accurate error information, rerun with --verbose.",
+        },
+        {
+            "version": "1.0.0",
+            "path": "tests/test_data/v100/./collectionless-item.json",
+            "schema": [
+                "https://stac-extensions.github.io/eo/v1.0.0/schema.json",
+                "https://stac-extensions.github.io/view/v1.0.0/schema.json",
+                "https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json",
+            ],
+            "valid_stac": True,
+            "asset_type": "ITEM",
+            "validation_method": "recursive",
+            "validator_engine": "jsonschema",
         },
     ]
 

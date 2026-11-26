@@ -699,7 +699,7 @@ class StacValidate:
 
             base_url = self.stac_file
 
-            child_validity = []
+            link_validity = []
             for link in self.stac_content["links"]:
                 if link["rel"] in ("child", "item"):
                     address = link["href"]
@@ -722,7 +722,7 @@ class StacValidate:
                 if link["rel"] == "child":
                     if not self.skip_val:
                         valid_child = self.recursive_validator(stac_type)
-                        child_validity.append(valid_child)
+                        link_validity.append(valid_child)
 
                 if link["rel"] == "item":
                     self.schema = set_schema_addr(self.version, stac_type.lower())
@@ -746,6 +746,29 @@ class StacValidate:
                             msg = self.default_validator(stac_type)
                             message["schema"] = msg["schema"]
                         message["valid_stac"] = True
+                    except jsonschema.exceptions.ValidationError as e:
+                        if e.context:
+                            e = best_match(e.context)  # type: ignore
+                        if e.absolute_path:
+                            err_msg = (
+                                f"{e.message}. Error is in "
+                                f"{' -> '.join([str(i) for i in e.absolute_path])} "
+                            )
+                        else:
+                            err_msg = f"{e.message}"
+                        message.update(
+                            self.create_err_msg(
+                                err_type="JSONSchemaValidationError",
+                                err_msg=err_msg,
+                                error_obj=e,
+                                schema_uri=(
+                                    e.schema.get("$id", "")
+                                    if hasattr(e, "schema")
+                                    and isinstance(e.schema, dict)
+                                    else ""
+                                ),
+                            )
+                        )
                     except Exception as e:
                         if self.pydantic and "pydantic" in str(e.__class__.__module__):
                             message.update(
@@ -755,13 +778,19 @@ class StacValidate:
                                     error_obj=e,
                                 )
                             )
-                            message["valid_stac"] = False
                         else:
-                            raise
+                            message.update(
+                                self.create_err_msg(
+                                    err_type=type(e).__name__,
+                                    err_msg=str(e),
+                                    error_obj=e,
+                                )
+                            )
 
+                    link_validity.append(message["valid_stac"])
                     if self.log or (not self.max_depth or self.max_depth < 5):
                         self.message.append(message)
-            if all(child_validity):
+            if all(link_validity):
                 valid = True
             else:
                 valid = False

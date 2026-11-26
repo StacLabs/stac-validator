@@ -6,6 +6,13 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ## [Unreleased]
 
+## [v4.6.4] - 2026-11-26
+
+### Fixed
+
+- **Recursive Validation Aborts on Invalid Items**: `recursive_validator` no longer aborts the whole walk when a linked `item` fails validation. Item failures are now recorded per-item with the same structured error shape used for `child` links, and remaining links are still validated.
+- **Item Validity Ignored in Recursive Result**: recursive validation now folds `item` link results into the overall `valid` outcome alongside `child` results, so an invalid linked item correctly fails the run.
+
 ## [v4.6.3] - 2026-11-25
 
 ### Changed
@@ -520,7 +527,8 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - With the newest version - 1.0.0-beta.2 - items will run through jsonchema validation before the PySTAC validation. The reason for this is that jsonschema will give more informative error messages. This should be addressed better in the future. This is not the case with the --recursive option as time can be a concern here with larger collections.
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
-[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.6.3..main
+[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.6.4..main
+[v4.6.4]: https://github.com/sparkgeo/stac-validator/compare/v4.6.3..v4.6.4
 [v4.6.3]: https://github.com/sparkgeo/stac-validator/compare/v4.6.2..v4.6.3
 [v4.6.2]: https://github.com/sparkgeo/stac-validator/compare/v4.6.1..v4.6.2
 [v4.6.1]: https://github.com/sparkgeo/stac-validator/compare/v4.6.0..v4.6.1
