@@ -705,6 +705,11 @@ class FastValidator:
         verbose: bool = False,
         limit: Optional[int] = None,
         validate_geometry: bool = False,
+        max_depth: Optional[int] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: float = 15,
+        session: Optional[requests.Session] = None,
+        keep_documents: bool = False,
     ):
         self.stac_file = stac_file
         self.quiet = quiet
@@ -712,6 +717,17 @@ class FastValidator:
         self.verbose = verbose
         self.limit = limit
         self.validate_geometry = validate_geometry
+        # Maximum recursion depth (root = 0); None means unlimited
+        self.max_depth = max_depth
+        # Transport for STAC resource fetches; schema fetching always uses
+        # the module-level HTTP_SESSION
+        self.timeout = timeout
+        self.session = session or HTTP_SESSION
+        self.headers = headers
+        # Opt-in result path -> loaded document map for consumers that need
+        # the documents without re-fetching
+        self.keep_documents = keep_documents
+        self.loaded_objects: Dict[str, Any] = {}
         self.message: List[Dict[str, Any]] = []
 
     def _validate_datetime_range(self, data: Dict[str, Any]) -> None:
@@ -833,12 +849,20 @@ class FastValidator:
 
     def _load_json_resource(self, resource_path: str) -> Dict[str, Any]:
         if resource_path.startswith("http"):
-            response = HTTP_SESSION.get(resource_path, timeout=15)
+            # Only pass headers when configured so custom sessions and
+            # patched HTTP_SESSION.get signatures keep working
+            kwargs: Dict[str, Any] = {"timeout": self.timeout}
+            if self.headers:
+                kwargs["headers"] = self.headers
+            response = self.session.get(resource_path, **kwargs)
             response.raise_for_status()
-            return response.json()
-
-        with open(resource_path, "r") as f:
-            return json.load(f)
+            data = response.json()
+        else:
+            with open(resource_path, "r") as f:
+                data = json.load(f)
+        if self.keep_documents:
+            self.loaded_objects[resource_path] = data
+        return data
 
     def _get_parallel_fetch_workers(self, item_count: int) -> int:
         return max(1, min(8, item_count))
@@ -1032,6 +1056,16 @@ class FastValidator:
         except Exception as e:
             click.secho(f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True)
             self.valid = False
+            self.message = [
+                {
+                    "path": self.stac_file,
+                    "id": "unknown",
+                    "valid_stac": False,
+                    "stac_type": "unknown",
+                    "stac_version": "unknown",
+                    "error_message": f"Failed to load: {e}",
+                }
+            ]
             return
 
         # Detect payload structure
@@ -1348,6 +1382,16 @@ class FastValidator:
         except Exception as e:
             click.secho(f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True)
             self.valid = False
+            self.message = [
+                {
+                    "path": self.stac_file,
+                    "id": "unknown",
+                    "valid_stac": False,
+                    "stac_type": "unknown",
+                    "stac_version": "unknown",
+                    "error_message": f"Failed to load: {e}",
+                }
+            ]
             return
 
         # Recursively validate the root and all children
@@ -1435,6 +1479,16 @@ class FastValidator:
         except Exception as e:
             click.secho(f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True)
             self.valid = False
+            self.message = [
+                {
+                    "path": self.stac_file,
+                    "id": "unknown",
+                    "valid_stac": False,
+                    "stac_type": "unknown",
+                    "stac_version": "unknown",
+                    "error_message": f"Failed to load: {e}",
+                }
+            ]
             return
 
         # Recursively validate the root and all children (API mode)
@@ -1560,6 +1614,10 @@ class FastValidator:
                     "error_message": f"Maximum catalog depth ({MAX_RECURSION_DEPTH}) exceeded.",
                 }
             )
+            return
+
+        # User-configured depth cap: objects at or beyond it are skipped
+        if self.max_depth is not None and depth >= self.max_depth:
             return
 
         if self._limit_reached(results):
@@ -1690,6 +1748,10 @@ class FastValidator:
                     should_follow = True
 
             if should_follow:
+                # Don't fetch children that would exceed the depth cap
+                if self.max_depth is not None and depth + 1 >= self.max_depth:
+                    break
+
                 # Resolve relative path
                 child_path = self._resolve_link_path(file_path, href)
 
@@ -1887,6 +1949,9 @@ class FastValidator:
                                         }
                                     )
                                     continue
+
+                                if self.keep_documents:
+                                    self.loaded_objects[item_path] = feature
 
                                 self._validate_recursive(
                                     feature,

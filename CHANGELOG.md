@@ -6,8 +6,14 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ## [Unreleased]
 
+### Added
+
+- **FastValidator Configuration Options**: `FastValidator` now accepts `max_depth` (cap recursion before children are fetched), `headers` and `timeout` (applied to remote resource fetches), `session` (custom `requests.Session` instead of the module-global one), and `keep_documents` (opt-in `loaded_objects` map of result path → loaded document).
+- **`fast` CLI Options**: `--max-depth` and `--header` flags for `stac-validator fast`.
+
 ### Fixed
 
+- **Root Load Failures Produce Structured Results**: `run()`, `run_recursive()`, and `run_api()` now append a structured error result (`error_message`, `stac_type`, `stac_version`) to `message` when the root document cannot be loaded, instead of only printing to stdout and leaving `message` empty.
 - **Remote Link Resolution Corrupting URLs**: `FastValidator` no longer mangles absolute URL bases (e.g., `https:/host/...`) when resolving relative `href`s; `http(s)` documents now resolve links with `urljoin`.
 - **`rel="next"` Pagination Never Followed**: API mode now follows `next` links in `items`/`collections` responses and on regular nodes, with a per-endpoint page cap and `visited` dedup, instead of silently validating page 1 only.
 - **Duplicate Results Across API Pages**: items appearing on multiple pages of an items endpoint are now validated once, deduplicated by collection-scoped item id.
