@@ -6,6 +6,13 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Remote Link Resolution Corrupting URLs**: `FastValidator` no longer mangles absolute URL bases (e.g., `https:/host/...`) when resolving relative `href`s; `http(s)` documents now resolve links with `urljoin`.
+- **`rel="next"` Pagination Never Followed**: API mode now follows `next` links in `items`/`collections` responses and on regular nodes, with a per-endpoint page cap and `visited` dedup, instead of silently validating page 1 only.
+- **Duplicate Results Across API Pages**: items appearing on multiple pages of an items endpoint are now validated once, deduplicated by collection-scoped item id.
+- **Non-Object Linked Resources**: a linked resource that parses to a non-object JSON value (array/scalar) now produces a clear failure result instead of a mislabeled "Failed to load" error.
+
 ## [v4.6.4] - 2026-11-26
 
 ### Fixed
