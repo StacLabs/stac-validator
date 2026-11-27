@@ -141,6 +141,9 @@ CACHE_LOCK = threading.Lock()
 # Dynamically determine writable cache directory across environments
 LOCAL_SCHEMA_DIR = get_cache_directory()
 
+# Default cap on "next" pages followed per paginated API endpoint
+DEFAULT_MAX_PAGES = 1000
+
 # Shared HTTP session with keep-alive connection pooling and retries for crawler workloads.
 HTTP_SESSION = requests.Session()
 _http_retries = Retry(
@@ -710,6 +713,7 @@ class FastValidator:
         timeout: float = 15,
         session: Optional[requests.Session] = None,
         keep_documents: bool = False,
+        max_pages: Optional[int] = None,
     ):
         self.stac_file = stac_file
         self.quiet = quiet
@@ -728,6 +732,12 @@ class FastValidator:
         # the documents without re-fetching
         self.keep_documents = keep_documents
         self.loaded_objects: Dict[str, Any] = {}
+        # Maximum "next" pages consumed per paginated endpoint, counting the
+        # first page; 0 follows every page, None uses the default cap.
+        # Endpoints cut short by the cap are recorded as
+        # (first page path, pages consumed).
+        self.max_pages = DEFAULT_MAX_PAGES if max_pages is None else max_pages
+        self.truncated_endpoints: List[Tuple[str, int]] = []
         # Per-thread sessions for parallel fetches (requests.Session is not
         # documented thread-safe)
         self._thread_local = threading.local()
@@ -1096,7 +1106,10 @@ class FastValidator:
         try:
             data = self._load_json_resource(self.stac_file)
         except Exception as e:
-            click.secho(f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True)
+            if not self.quiet:
+                click.secho(
+                    f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True
+                )
             self.valid = False
             self.message = [
                 {
@@ -1435,8 +1448,15 @@ class FastValidator:
                 if self.stac_file.startswith("http")
                 else os.path.abspath(self.stac_file)
             )
+            if self.keep_documents:
+                # Results reference root_path (abspath for local files),
+                # while _load_json_resource keys the map by stac_file
+                self.loaded_objects.setdefault(root_path, root_data)
         except Exception as e:
-            click.secho(f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True)
+            if not self.quiet:
+                click.secho(
+                    f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True
+                )
             self.valid = False
             self.message = [
                 {
@@ -1554,8 +1574,15 @@ class FastValidator:
                 if self.stac_file.startswith("http")
                 else os.path.abspath(self.stac_file)
             )
+            if self.keep_documents:
+                # Results reference root_path (abspath for local files),
+                # while _load_json_resource keys the map by stac_file
+                self.loaded_objects.setdefault(root_path, root_data)
         except Exception as e:
-            click.secho(f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True)
+            if not self.quiet:
+                click.secho(
+                    f"❌ Error reading {self.stac_file}: {e}", fg="red", bold=True
+                )
             self.valid = False
             self.message = [
                 {
@@ -1697,8 +1724,6 @@ class FastValidator:
         """
         # Protect against deeply nested catalog structures
         MAX_RECURSION_DEPTH = 250
-        # Cap "next" pagination pages followed per endpoint
-        MAX_PAGINATION_PAGES = 1000
         if depth > MAX_RECURSION_DEPTH:
             results.append(
                 {
@@ -1981,16 +2006,21 @@ class FastValidator:
                                         depth=depth + 1,
                                     )
 
-                                if (
-                                    self._limit_reached(results)
-                                    or pages_followed >= MAX_PAGINATION_PAGES
-                                ):
+                                if self._limit_reached(results):
                                     break
 
                                 next_path = self._next_page_path(
                                     page_data, page_path, visited
                                 )
                                 if next_path is None:
+                                    break
+                                if (
+                                    self.max_pages
+                                    and pages_followed + 1 >= self.max_pages
+                                ):
+                                    self.truncated_endpoints.append(
+                                        (child_path, pages_followed + 1)
+                                    )
                                     break
                                 try:
                                     page_data = self._load_json_resource(next_path)
@@ -2092,16 +2122,18 @@ class FastValidator:
                                     depth=depth + 1,
                                 )
 
-                            if (
-                                self._limit_reached(results)
-                                or pages_followed >= MAX_PAGINATION_PAGES
-                            ):
+                            if self._limit_reached(results):
                                 break
 
                             next_path = self._next_page_path(
                                 page_data, page_path, visited
                             )
                             if next_path is None:
+                                break
+                            if self.max_pages and pages_followed + 1 >= self.max_pages:
+                                self.truncated_endpoints.append(
+                                    (child_path, pages_followed + 1)
+                                )
                                 break
                             try:
                                 page_data = self._load_json_resource(next_path)

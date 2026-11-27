@@ -12,10 +12,11 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - **`fast` CLI Options**: `--max-depth` and `--header` flags for `stac-validator fast`.
 - **`catalogs`/`collections` Index Endpoint Traversal**: API mode now follows `rel="catalogs"` and `rel="collections"` links, extracting `{id}`-bearing members the same way `rel="data"` collections lists are handled, so catalogs-extension trees are reachable.
 - **API Detection Warning in Recursive Mode**: `run_recursive()` now warns when the root document looks like a STAC API (`conformsTo`), since only `child`/`item` links are traversed there; use `--api`/`run_api()` to traverse API links.
+- **Pagination Cap and Truncation Reporting**: `FastValidator` accepts `max_pages` (pages followed per paginated endpoint, counting the first; `0` follows every page, default 1000), exposed in the CLI as `--max-pages`. Endpoints cut short by the cap are recorded on `truncated_endpoints` as `(endpoint path, pages consumed)` so callers can warn about partial results.
 
 ### Changed
 
-- **`quiet` Silences Validation Summaries**: `run_recursive()` and `run_api()` no longer print the summary and invalid-objects report when `quiet` is set; `valid` and `message` are unaffected.
+- **`quiet` Silences Validation Summaries**: `run_recursive()` and `run_api()` no longer print the summary and invalid-objects report when `quiet` is set; `valid` and `message` are unaffected. Root-load error output is also quiet-gated.
 
 ### Fixed
 
@@ -29,6 +30,7 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - **`rel="next"` Pagination Never Followed**: API mode now follows `next` links in `items`/`collections` responses and on regular nodes, with a per-endpoint page cap and `visited` dedup, instead of silently validating page 1 only.
 - **Duplicate Results Across API Pages**: items appearing on multiple pages of an items endpoint are now validated once, deduplicated by collection-scoped item id.
 - **Non-Object Linked Resources**: a linked resource that parses to a non-object JSON value (array/scalar) now produces a clear failure result instead of a mislabeled "Failed to load" error.
+- **`loaded_objects` Root Key Mismatch**: `run_recursive()` and `run_api()` now also index the root document under the result path (absolute for local files), so `loaded_objects[result["path"]]` resolves for the root as well as children.
 
 ## [v4.6.4] - 2026-11-26
 

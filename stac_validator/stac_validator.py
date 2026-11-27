@@ -564,6 +564,13 @@ def batch(
     help="Maximum recursion depth for --recursive/--api (the root document is depth 1).",
 )
 @click.option(
+    "--max-pages",
+    type=click.IntRange(min=0),
+    default=None,
+    help="Maximum number of 'next' pages to follow per paginated API list "
+    "(the first page counts). 0 follows every page. Default is 1000.",
+)
+@click.option(
     "--header",
     type=(str, str),
     multiple=True,
@@ -577,6 +584,7 @@ def fast(
     api: bool,
     limit: Optional[int],
     max_depth: Optional[int],
+    max_pages: Optional[int],
     header: list,
 ):
     """High-speed validation using fastjsonschema and local caching."""
@@ -595,6 +603,7 @@ def fast(
             verbose=verbose,
             limit=limit,
             max_depth=max_depth,
+            max_pages=max_pages,
             headers=dict(header) or None,
         )
         if api:
