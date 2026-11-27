@@ -728,6 +728,9 @@ class FastValidator:
         # the documents without re-fetching
         self.keep_documents = keep_documents
         self.loaded_objects: Dict[str, Any] = {}
+        # Per-thread sessions for parallel fetches (requests.Session is not
+        # documented thread-safe)
+        self._thread_local = threading.local()
         self.message: List[Dict[str, Any]] = []
 
     def _validate_datetime_range(self, data: Dict[str, Any]) -> None:
@@ -847,6 +850,31 @@ class FastValidator:
             return urljoin(file_path, href)
         return os.path.normpath(os.path.join(os.path.dirname(file_path), href))
 
+    def _session_for_current_thread(self) -> requests.Session:
+        """Return the session to use on the current thread.
+
+        requests.Session is not documented thread-safe, so worker threads in
+        the parallel prefetch get their own session mirroring the base one.
+        A user-supplied session is always used as-is (its thread-safety is
+        the caller's responsibility).
+        """
+        if self.session is not HTTP_SESSION:
+            return self.session
+        if threading.current_thread() is threading.main_thread():
+            return HTTP_SESSION
+        sess = getattr(self._thread_local, "session", None)
+        if sess is None:
+            sess = requests.Session()
+            sess.mount("http://", _http_adapter)
+            sess.mount("https://", _http_adapter)
+            sess.headers.update(HTTP_SESSION.headers)
+            # Preserve instance-level overrides, e.g. a monkeypatched get()
+            override = HTTP_SESSION.__dict__.get("get")
+            if override is not None:
+                sess.get = override  # type: ignore[method-assign]
+            self._thread_local.session = sess
+        return sess
+
     def _load_json_resource(self, resource_path: str) -> Dict[str, Any]:
         if resource_path.startswith("http"):
             # Only pass headers when configured so custom sessions and
@@ -854,7 +882,7 @@ class FastValidator:
             kwargs: Dict[str, Any] = {"timeout": self.timeout}
             if self.headers:
                 kwargs["headers"] = self.headers
-            response = self.session.get(resource_path, **kwargs)
+            response = self._session_for_current_thread().get(resource_path, **kwargs)
             response.raise_for_status()
             data = response.json()
         else:
@@ -903,7 +931,7 @@ class FastValidator:
         return results_parallel
 
     def _prefetch_api_collection_resources(
-        self, collection_url: str
+        self, collection_url: str, remaining_capacity: Optional[int] = None
     ) -> Tuple[str, Optional[Dict[str, Dict[str, Any]]], Optional[Exception]]:
         try:
             collection_data = self._load_json_resource(collection_url)
@@ -911,6 +939,10 @@ class FastValidator:
             return collection_url, None, exc
 
         resources = {collection_url: collection_data}
+
+        # Don't fetch items pages when the result limit is already exhausted
+        if remaining_capacity is not None and remaining_capacity <= 0:
+            return collection_url, resources, None
 
         for link in collection_data.get("links", []):
             if link.get("rel") != "items":
@@ -924,17 +956,23 @@ class FastValidator:
 
             try:
                 resources[items_path] = self._load_json_resource(items_path)
-            except Exception:
-                pass
+            except Exception as exc:
+                # The link loop retries and reports the failure; log so the
+                # prefetch error itself isn't invisible
+                logger.warning("Prefetch failed for %s: %s", items_path, exc)
 
         return collection_url, resources, None
 
     def _prefetch_api_collection_resources_batch(
-        self, collection_urls: List[str]
+        self,
+        collection_urls: List[str],
+        remaining_capacity: Optional[int] = None,
     ) -> List[Tuple[str, Optional[Dict[str, Dict[str, Any]]], Optional[Exception]]]:
         if len(collection_urls) <= 1:
             return [
-                self._prefetch_api_collection_resources(collection_url)
+                self._prefetch_api_collection_resources(
+                    collection_url, remaining_capacity
+                )
                 for collection_url in collection_urls
             ]
 
@@ -946,7 +984,11 @@ class FastValidator:
                     Tuple[str, Optional[Dict[str, Dict[str, Any]]], Optional[Exception]]
                 ]
             ] = [
-                executor.submit(self._prefetch_api_collection_resources, collection_url)
+                executor.submit(
+                    self._prefetch_api_collection_resources,
+                    collection_url,
+                    remaining_capacity,
+                )
                 for collection_url in collection_urls
             ]
             return [future.result() for future in futures]
@@ -1064,6 +1106,20 @@ class FastValidator:
                     "stac_type": "unknown",
                     "stac_version": "unknown",
                     "error_message": f"Failed to load: {e}",
+                }
+            ]
+            return
+
+        if not isinstance(data, dict):
+            self.valid = False
+            self.message = [
+                {
+                    "path": self.stac_file,
+                    "id": "unknown",
+                    "valid_stac": False,
+                    "stac_type": "unknown",
+                    "stac_version": "unknown",
+                    "error_message": "Root document is not a JSON object.",
                 }
             ]
             return
@@ -1394,6 +1450,27 @@ class FastValidator:
             ]
             return
 
+        if not isinstance(root_data, dict):
+            self.valid = False
+            self.message = [
+                {
+                    "path": root_path,
+                    "id": "unknown",
+                    "valid_stac": False,
+                    "stac_type": "unknown",
+                    "stac_version": "unknown",
+                    "error_message": "Root document is not a JSON object.",
+                }
+            ]
+            return
+
+        if "conformsTo" in root_data and not self.quiet:
+            click.secho(
+                "⚠️  STAC API detected; only 'child'/'item' links are followed "
+                "in recursive mode. Use --api or run_api() to traverse API links.",
+                fg="yellow",
+            )
+
         # Recursively validate the root and all children
         results = []
         visited = set()
@@ -1408,51 +1485,52 @@ class FastValidator:
                 fg="yellow",
             )
 
-        # Display results
-        click.echo("\n" + "=" * 55)
-        click.secho("📊 RECURSIVE VALIDATION SUMMARY", bold=True, fg="blue")
-        click.echo("=" * 55)
-
-        valid_count = sum(1 for r in results if r["valid_stac"])
-        invalid_count = len(results) - valid_count
-        elapsed_ms = (time.perf_counter() - start_time) * 1000
-
-        click.echo(f"Total Objects Validated: {len(results)}")
-        click.echo(f"Valid Objects:           {valid_count}")
-        click.echo(f"Invalid Objects:         {invalid_count}")
-        click.echo(f"Execution Time:          {elapsed_ms:.2f} ms")
-
-        if invalid_count > 0:
+        if not self.quiet:
+            # Display results
             click.echo("\n" + "=" * 55)
-            click.secho("🚨 INVALID OBJECTS", bold=True, fg="red")
+            click.secho("📊 RECURSIVE VALIDATION SUMMARY", bold=True, fg="blue")
             click.echo("=" * 55)
 
-            # Group errors by message
-            error_groups = {}
-            for result in results:
-                if not result["valid_stac"]:
-                    error_msg = result.get("error_message", "Unknown error")
-                    if error_msg not in error_groups:
-                        error_groups[error_msg] = []
-                    # Store both path and ID for better identification
-                    object_id = result.get("id", "unknown")
-                    error_groups[error_msg].append(
-                        {"path": result["path"], "id": object_id}
-                    )
+            valid_count = sum(1 for r in results if r["valid_stac"])
+            invalid_count = len(results) - valid_count
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
 
-            # Display grouped errors
-            for error_msg, items in error_groups.items():
-                click.echo(f"\n❌ {error_msg}")
-                click.echo(f"   Affected Objects: {len(items)}")
-                # Show first 5 examples
-                for item in items[:5]:
-                    item_id = item["id"] if item["id"] != "unknown" else ""
-                    if item_id:
-                        click.echo(f"   - {item['path']} (ID: {item_id})")
-                    else:
-                        click.echo(f"   - {item['path']}")
-                if len(items) > 5:
-                    click.echo(f"   ... and {len(items) - 5} more")
+            click.echo(f"Total Objects Validated: {len(results)}")
+            click.echo(f"Valid Objects:           {valid_count}")
+            click.echo(f"Invalid Objects:         {invalid_count}")
+            click.echo(f"Execution Time:          {elapsed_ms:.2f} ms")
+
+            if invalid_count > 0:
+                click.echo("\n" + "=" * 55)
+                click.secho("🚨 INVALID OBJECTS", bold=True, fg="red")
+                click.echo("=" * 55)
+
+                # Group errors by message
+                error_groups = {}
+                for result in results:
+                    if not result["valid_stac"]:
+                        error_msg = result.get("error_message", "Unknown error")
+                        if error_msg not in error_groups:
+                            error_groups[error_msg] = []
+                        # Store both path and ID for better identification
+                        object_id = result.get("id", "unknown")
+                        error_groups[error_msg].append(
+                            {"path": result["path"], "id": object_id}
+                        )
+
+                # Display grouped errors
+                for error_msg, items in error_groups.items():
+                    click.echo(f"\n❌ {error_msg}")
+                    click.echo(f"   Affected Objects: {len(items)}")
+                    # Show first 5 examples
+                    for item in items[:5]:
+                        item_id = item["id"] if item["id"] != "unknown" else ""
+                        if item_id:
+                            click.echo(f"   - {item['path']} (ID: {item_id})")
+                        else:
+                            click.echo(f"   - {item['path']}")
+                    if len(items) > 5:
+                        click.echo(f"   ... and {len(items) - 5} more")
 
         # Set overall validity
         self.valid = all(r.get("valid_stac", False) for r in results)
@@ -1491,6 +1569,20 @@ class FastValidator:
             ]
             return
 
+        if not isinstance(root_data, dict):
+            self.valid = False
+            self.message = [
+                {
+                    "path": root_path,
+                    "id": "unknown",
+                    "valid_stac": False,
+                    "stac_type": "unknown",
+                    "stac_version": "unknown",
+                    "error_message": "Root document is not a JSON object.",
+                }
+            ]
+            return
+
         # Recursively validate the root and all children (API mode)
         results = []
         visited = set()
@@ -1514,51 +1606,52 @@ class FastValidator:
                 fg="yellow",
             )
 
-        # Display results
-        click.echo("\n" + "=" * 55)
-        click.secho("📊 STAC API VALIDATION SUMMARY", bold=True, fg="blue")
-        click.echo("=" * 55)
-
-        valid_count = sum(1 for r in results if r["valid_stac"])
-        invalid_count = len(results) - valid_count
-        elapsed_ms = (time.perf_counter() - start_time) * 1000
-
-        click.echo(f"Total Objects Validated: {len(results)}")
-        click.echo(f"Valid Objects:           {valid_count}")
-        click.echo(f"Invalid Objects:         {invalid_count}")
-        click.echo(f"Execution Time:          {elapsed_ms:.2f} ms")
-
-        if invalid_count > 0:
+        if not self.quiet:
+            # Display results
             click.echo("\n" + "=" * 55)
-            click.secho("🚨 INVALID OBJECTS", bold=True, fg="red")
+            click.secho("📊 STAC API VALIDATION SUMMARY", bold=True, fg="blue")
             click.echo("=" * 55)
 
-            # Group errors by message
-            error_groups = {}
-            for result in results:
-                if not result["valid_stac"]:
-                    error_msg = result.get("error_message", "Unknown error")
-                    if error_msg not in error_groups:
-                        error_groups[error_msg] = []
-                    # Store both path and ID for better identification
-                    object_id = result.get("id", "unknown")
-                    error_groups[error_msg].append(
-                        {"path": result["path"], "id": object_id}
-                    )
+            valid_count = sum(1 for r in results if r["valid_stac"])
+            invalid_count = len(results) - valid_count
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
 
-            # Display grouped errors
-            for error_msg, items in error_groups.items():
-                click.echo(f"\n❌ {error_msg}")
-                click.echo(f"   Affected Objects: {len(items)}")
-                # Show first 5 examples
-                for item in items[:5]:
-                    item_id = item["id"] if item["id"] != "unknown" else ""
-                    if item_id:
-                        click.echo(f"   - {item['path']} (ID: {item_id})")
-                    else:
-                        click.echo(f"   - {item['path']}")
-                if len(items) > 5:
-                    click.echo(f"   ... and {len(items) - 5} more")
+            click.echo(f"Total Objects Validated: {len(results)}")
+            click.echo(f"Valid Objects:           {valid_count}")
+            click.echo(f"Invalid Objects:         {invalid_count}")
+            click.echo(f"Execution Time:          {elapsed_ms:.2f} ms")
+
+            if invalid_count > 0:
+                click.echo("\n" + "=" * 55)
+                click.secho("🚨 INVALID OBJECTS", bold=True, fg="red")
+                click.echo("=" * 55)
+
+                # Group errors by message
+                error_groups = {}
+                for result in results:
+                    if not result["valid_stac"]:
+                        error_msg = result.get("error_message", "Unknown error")
+                        if error_msg not in error_groups:
+                            error_groups[error_msg] = []
+                        # Store both path and ID for better identification
+                        object_id = result.get("id", "unknown")
+                        error_groups[error_msg].append(
+                            {"path": result["path"], "id": object_id}
+                        )
+
+                # Display grouped errors
+                for error_msg, items in error_groups.items():
+                    click.echo(f"\n❌ {error_msg}")
+                    click.echo(f"   Affected Objects: {len(items)}")
+                    # Show first 5 examples
+                    for item in items[:5]:
+                        item_id = item["id"] if item["id"] != "unknown" else ""
+                        if item_id:
+                            click.echo(f"   - {item['path']} (ID: {item_id})")
+                        else:
+                            click.echo(f"   - {item['path']}")
+                    if len(items) > 5:
+                        click.echo(f"   ... and {len(items) - 5} more")
 
         # Set overall validity
         self.valid = all(r.get("valid_stac", False) for r in results)
@@ -1623,11 +1716,29 @@ class FastValidator:
         if self._limit_reached(results):
             return
 
+        # Determine STAC type - could be "Catalog", "Collection", or "Feature"
+        # (Item). STAC <1.0 documents lack a "type" member, so infer
+        # structurally: 'extent' marks a Collection (a bare 'license' does not -
+        # pre-1.0 catalogs may carry one), anything else is a Catalog.
+        raw_type = data.get("type")
+        if raw_type in ("Feature", "Collection", "Catalog"):
+            stac_type = {
+                "Feature": "item",
+                "Collection": "collection",
+                "Catalog": "catalog",
+            }[raw_type]
+        elif raw_type:
+            stac_type = str(raw_type).lower()
+        else:
+            stac_type = "collection" if "extent" in data else "catalog"
+
+        stac_version = data.get("stac_version", "unknown")
+
         # Log progress in API mode
         if is_api and not self.quiet:
             self._progress_count += 1
             object_id = data.get("id", "unknown")
-            object_type = data.get("type", "unknown")
+            object_type = raw_type if raw_type else stac_type.capitalize()
             if collection_id and object_type == "Feature":
                 click.secho(
                     f"  [{self._progress_count}] Validating {object_type}: {object_id} (Collection: {collection_id})",
@@ -1640,19 +1751,6 @@ class FastValidator:
                     fg="cyan",
                     dim=True,
                 )
-
-        # Determine STAC type - could be "Catalog", "Collection", or "Feature" (Item)
-        raw_type = data.get("type", "unknown")
-        if raw_type == "Feature":
-            stac_type = "item"
-        elif raw_type == "Collection":
-            stac_type = "collection"
-        elif raw_type == "Catalog":
-            stac_type = "catalog"
-        else:
-            stac_type = raw_type.lower() if raw_type else "unknown"
-
-        stac_version = data.get("stac_version", "unknown")
 
         # Validate current object using get_validator (same as run() does)
         # Skip validation for STAC API responses (they have conformsTo instead of stac_extensions)
@@ -1738,9 +1836,22 @@ class FastValidator:
             # Determine if we should follow this link based on mode
             should_follow = False
             if is_api:
-                # API mode: follow "data" (collections), "child", "item",
-                # "items", and "next" pagination links
-                if rel in ["data", "child", "item", "items", "next"] and href:
+                # API mode: follow "data" (collections), "catalogs"/"collections"
+                # index endpoints, "child", "item", "items", and "next"
+                # pagination links
+                if (
+                    rel
+                    in [
+                        "data",
+                        "catalogs",
+                        "collections",
+                        "child",
+                        "item",
+                        "items",
+                        "next",
+                    ]
+                    and href
+                ):
                     should_follow = True
             else:
                 # Local mode: follow "child" and "item" links only
@@ -1784,17 +1895,26 @@ class FastValidator:
                         continue
 
                     # A "next" page continues the endpoint that produced it,
-                    # so route it by content rather than by link rel.
+                    # and "catalogs"/"collections" rels point at index
+                    # endpoints like "data" - route them by content.
                     effective_rel = rel
-                    if rel == "next":
+                    if rel == "next" or rel in ("catalogs", "collections"):
                         if isinstance(child_data.get("features"), list):
                             effective_rel = "items"
-                        elif isinstance(child_data.get("collections"), list):
+                        elif isinstance(
+                            child_data.get("collections"), list
+                        ) or isinstance(child_data.get("catalogs"), list):
                             effective_rel = "data"
 
                     # If this is a collections list endpoint, extract individual collections
                     if effective_rel == "data" and is_api:
-                        collections = child_data.get("collections", [])
+                        # "collections" and "catalogs" payloads are both index
+                        # lists of {id}-bearing members
+                        collections = child_data.get("collections") or child_data.get(
+                            "catalogs"
+                        )
+                        if not isinstance(collections, list):
+                            collections = []
                         if collections:
                             # This is a collections list - process each
                             # collection, following "next" pagination
@@ -1815,12 +1935,21 @@ class FastValidator:
                                     remaining = max(1, self.limit - len(results))
                                     collection_urls = collection_urls[:remaining]
 
+                                # The collections being prefetched consume the
+                                # remaining slots themselves, so items pages
+                                # are only fetched when capacity is left over
+                                remaining_capacity = None
+                                if self.limit is not None:
+                                    remaining_capacity = (
+                                        self.limit - len(results) - len(collection_urls)
+                                    )
+
                                 for (
                                     collection_url,
                                     prefetched_collection_resources,
                                     load_error,
                                 ) in self._prefetch_api_collection_resources_batch(
-                                    collection_urls
+                                    collection_urls, remaining_capacity
                                 ):
                                     if self._limit_reached(results):
                                         break
