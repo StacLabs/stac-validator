@@ -1941,9 +1941,7 @@ class FastValidator:
                                 remaining_capacity = None
                                 if self.limit is not None:
                                     remaining_capacity = (
-                                        self.limit
-                                        - len(results)
-                                        - len(collection_urls)
+                                        self.limit - len(results) - len(collection_urls)
                                     )
 
                                 for (
