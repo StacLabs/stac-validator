@@ -736,6 +736,8 @@ class FastValidator:
         # first page; 0 follows every page, None uses the default cap.
         # Endpoints cut short by the cap are recorded as
         # (first page path, pages consumed).
+        if max_pages is not None and max_pages < 0:
+            raise ValueError("max_pages must be 0 or greater")
         self.max_pages = DEFAULT_MAX_PAGES if max_pages is None else max_pages
         self.truncated_endpoints: List[Tuple[str, int]] = []
         # Per-thread sessions for parallel fetches (requests.Session is not
@@ -1633,6 +1635,15 @@ class FastValidator:
                 fg="yellow",
             )
 
+        if self.truncated_endpoints and not self.quiet:
+            click.secho(
+                f"⚠️  Pagination cap ({self.max_pages} pages) reached; "
+                "results are incomplete for:",
+                fg="yellow",
+            )
+            for endpoint, pages in self.truncated_endpoints:
+                click.secho(f"   {endpoint} ({pages} pages)", fg="yellow", dim=True)
+
         if not self.quiet:
             # Display results
             click.echo("\n" + "=" * 55)
@@ -2021,6 +2032,11 @@ class FastValidator:
                                     self.truncated_endpoints.append(
                                         (child_path, pages_followed + 1)
                                     )
+                                    # The capped page was resolved only to
+                                    # detect the truncation — release it so
+                                    # the same URL can be reached via other
+                                    # links later in the walk
+                                    visited.discard(next_path)
                                     break
                                 try:
                                     page_data = self._load_json_resource(next_path)
@@ -2134,6 +2150,11 @@ class FastValidator:
                                 self.truncated_endpoints.append(
                                     (child_path, pages_followed + 1)
                                 )
+                                # The capped page was resolved only to
+                                # detect the truncation — release it so the
+                                # same URL can be reached via other links
+                                # later in the walk
+                                visited.discard(next_path)
                                 break
                             try:
                                 page_data = self._load_json_resource(next_path)

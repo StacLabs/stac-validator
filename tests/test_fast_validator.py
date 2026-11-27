@@ -1508,6 +1508,66 @@ class TestFastValidatorRecursiveAndApi:
         assert item_ids == ["item-1"]
         assert fv.truncated_endpoints == [(base, 1)]
 
+    def test_max_pages_truncation_warns(self, monkeypatch, capsys):
+        """run_api prints a warning listing endpoints cut short by the cap."""
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+
+        base = "https://api.example.com/collections/demo/items"
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [{"rel": "items", "href": base}],
+            },
+            base: {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "stac_version": "1.0.0",
+                        "type": "Feature",
+                        "id": "item-1",
+                        "geometry": None,
+                        "properties": {"datetime": "2023-01-01T00:00:00Z"},
+                        "links": [],
+                        "assets": {},
+                    }
+                ],
+                "links": [{"rel": "next", "href": f"{base}?cursor=2"}],
+            },
+        }
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=False, max_pages=1)
+        fv.run_api()
+
+        out = capsys.readouterr().out
+        assert "Pagination cap" in out
+        assert base in out
+
     def test_max_pages_zero_follows_all_pages(self, monkeypatch):
         """max_pages=0 disables the page cap."""
 
@@ -1623,6 +1683,11 @@ class TestFastValidatorRecursiveAndApi:
         assert fv.valid is False
         assert fv.message[0]["error_message"].startswith("Failed to load")
         assert capsys.readouterr().out == ""
+
+    def test_negative_max_pages_rejected(self):
+        """Negative max_pages raises instead of silently truncating."""
+        with pytest.raises(ValueError, match="max_pages"):
+            FastValidator("https://api.example.com", max_pages=-1)
 
 
 class TestFastValidatorRefResolutionFallback:

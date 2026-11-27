@@ -308,16 +308,22 @@ Usage: stac-valid fast [OPTIONS] STAC_FILE
   High-speed validation using fastjsonschema and local caching.
 
 Options:
-  -q, --quiet    Suppress individual item logs.
-  -v, --verbose  Show full validation logs for all items. By default, only
-                 invalid items are shown.
-    -r, --recursive  Recursively validate all child catalogs, collections,
-                                     and items.
-    -a, --api        Validate a STAC API catalog recursively (follows data,
-                                     child, item, and items links).
-    --limit INTEGER RANGE  Limit number of STAC objects to validate.
-                                                 [x>=1]
-  --help         Show this message and exit.
+  -q, --quiet                Suppress individual item logs.
+  -v, --verbose              Show full validation logs for all items. By
+                             default, a limited sample of item logs is shown.
+  -r, --recursive            Recursively validate all child catalogs,
+                             collections, and items.
+  -a, --api                  Validate a STAC API catalog recursively (follows
+                             data, child, item, items, and next links).
+  --limit INTEGER RANGE      Limit number of STAC objects to validate.  [x>=1]
+  --max-depth INTEGER RANGE  Maximum recursion depth for --recursive/--api
+                             (the root document is depth 1).  [x>=1]
+  --max-pages INTEGER RANGE  Maximum number of 'next' pages to follow per
+                             paginated API list (the first page counts). 0
+                             follows every page. Default is 1000.  [x>=0]
+  --header <TEXT TEXT>...    HTTP header to include in remote requests. Can be
+                             used multiple times.
+  --help                     Show this message and exit.
 ```
 
 #### Legacy Validation

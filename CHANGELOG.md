@@ -12,7 +12,7 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - **`fast` CLI Options**: `--max-depth` and `--header` flags for `stac-validator fast`.
 - **`catalogs`/`collections` Index Endpoint Traversal**: API mode now follows `rel="catalogs"` and `rel="collections"` links, extracting `{id}`-bearing members the same way `rel="data"` collections lists are handled, so catalogs-extension trees are reachable.
 - **API Detection Warning in Recursive Mode**: `run_recursive()` now warns when the root document looks like a STAC API (`conformsTo`), since only `child`/`item` links are traversed there; use `--api`/`run_api()` to traverse API links.
-- **Pagination Cap and Truncation Reporting**: `FastValidator` accepts `max_pages` (pages followed per paginated endpoint, counting the first; `0` follows every page, default 1000), exposed in the CLI as `--max-pages`. Endpoints cut short by the cap are recorded on `truncated_endpoints` as `(endpoint path, pages consumed)` so callers can warn about partial results.
+- **Pagination Cap and Truncation Reporting**: `FastValidator` accepts `max_pages` (pages followed per paginated endpoint, counting the first; `0` follows every page, default 1000), exposed in the CLI as `--max-pages`. Endpoints cut short by the cap are recorded on `truncated_endpoints` as `(endpoint path, pages consumed)` and `run_api()` prints a warning listing them so partial results are never silent.
 
 ### Changed
 
