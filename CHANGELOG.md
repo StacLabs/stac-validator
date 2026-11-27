@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- API collection prefetch no longer fetches `rel=items` pages when the items would fall outside `max_depth` and never be validated — on a `--max-depth 2` walk this saves one request per collection (hundreds on large APIs under rate limits)
+
 ## [v4.7.0] - 2026-11-27
 
 ### Added

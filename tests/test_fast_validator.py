@@ -436,7 +436,9 @@ class TestFastValidatorRecursiveAndApi:
 
         captured = []
 
-        def _fake_prefetch(self, collection_urls, remaining_capacity=None):
+        def _fake_prefetch(
+            self, collection_urls, remaining_capacity=None, include_items=True
+        ):
             captured.extend(collection_urls)
             return []
 
@@ -1292,6 +1294,139 @@ class TestFastValidatorRecursiveAndApi:
 
         assert items_url not in fetched
         assert len(fv.message) == 2
+
+    def test_prefetch_skips_items_beyond_max_depth(self, monkeypatch):
+        """Prefetch does not fetch items pages the depth cap would exclude."""
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+
+        items_url = "https://api.example.com/collections/demo-collection/items"
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {"rel": "data", "href": "https://api.example.com/collections"}
+                ],
+            },
+            "https://api.example.com/collections": {
+                "collections": [{"id": "demo-collection"}],
+            },
+            "https://api.example.com/collections/demo-collection": {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": "demo-collection",
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [{"rel": "items", "href": items_url}],
+            },
+            # items_url deliberately absent: if prefetch fetched it,
+            # _fake_get would raise
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True, max_depth=2)
+        fv.run_api()
+
+        assert items_url not in fetched
+        # root + collection are still validated; items are excluded by the cap
+        assert len(fv.message) == 2
+
+    def test_prefetch_fetches_items_within_max_depth(self, monkeypatch):
+        """With room under the depth cap, items pages are still prefetched."""
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+
+        items_url = "https://api.example.com/collections/demo-collection/items"
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {"rel": "data", "href": "https://api.example.com/collections"}
+                ],
+            },
+            "https://api.example.com/collections": {
+                "collections": [{"id": "demo-collection"}],
+            },
+            "https://api.example.com/collections/demo-collection": {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": "demo-collection",
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [{"rel": "items", "href": items_url}],
+            },
+            items_url: {
+                "type": "FeatureCollection",
+                "features": [],
+                "links": [],
+            },
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True, max_depth=3)
+        fv.run_api()
+
+        assert items_url in fetched
 
     def test_api_mode_catalogs_rel_traversal(self, monkeypatch):
         """rel=catalogs index endpoints are traversed like rel=data."""

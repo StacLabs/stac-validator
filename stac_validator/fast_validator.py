@@ -943,7 +943,10 @@ class FastValidator:
         return results_parallel
 
     def _prefetch_api_collection_resources(
-        self, collection_url: str, remaining_capacity: Optional[int] = None
+        self,
+        collection_url: str,
+        remaining_capacity: Optional[int] = None,
+        include_items: bool = True,
     ) -> Tuple[str, Optional[Dict[str, Dict[str, Any]]], Optional[Exception]]:
         try:
             collection_data = self._load_json_resource(collection_url)
@@ -952,8 +955,12 @@ class FastValidator:
 
         resources = {collection_url: collection_data}
 
-        # Don't fetch items pages when the result limit is already exhausted
-        if remaining_capacity is not None and remaining_capacity <= 0:
+        # Don't fetch items pages when the result limit is already
+        # exhausted or the items would fall outside the depth cap and
+        # never be validated
+        if (
+            remaining_capacity is not None and remaining_capacity <= 0
+        ) or not include_items:
             return collection_url, resources, None
 
         for link in collection_data.get("links", []):
@@ -979,11 +986,12 @@ class FastValidator:
         self,
         collection_urls: List[str],
         remaining_capacity: Optional[int] = None,
+        include_items: bool = True,
     ) -> List[Tuple[str, Optional[Dict[str, Dict[str, Any]]], Optional[Exception]]]:
         if len(collection_urls) <= 1:
             return [
                 self._prefetch_api_collection_resources(
-                    collection_url, remaining_capacity
+                    collection_url, remaining_capacity, include_items
                 )
                 for collection_url in collection_urls
             ]
@@ -1000,6 +1008,7 @@ class FastValidator:
                     self._prefetch_api_collection_resources,
                     collection_url,
                     remaining_capacity,
+                    include_items,
                 )
                 for collection_url in collection_urls
             ]
@@ -1980,12 +1989,21 @@ class FastValidator:
                                         self.limit - len(results) - len(collection_urls)
                                     )
 
+                                # Items land at depth + 2; when the depth
+                                # cap excludes them their pages would be
+                                # fetched and discarded, so skip prefetch
+                                include_items = (
+                                    self.max_depth is None or depth + 2 < self.max_depth
+                                )
+
                                 for (
                                     collection_url,
                                     prefetched_collection_resources,
                                     load_error,
                                 ) in self._prefetch_api_collection_resources_batch(
-                                    collection_urls, remaining_capacity
+                                    collection_urls,
+                                    remaining_capacity,
+                                    include_items,
                                 ):
                                     if self._limit_reached(results):
                                         break
