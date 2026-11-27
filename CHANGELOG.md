@@ -10,9 +10,20 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 - **FastValidator Configuration Options**: `FastValidator` now accepts `max_depth` (cap recursion before children are fetched), `headers` and `timeout` (applied to remote resource fetches), `session` (custom `requests.Session` instead of the module-global one), and `keep_documents` (opt-in `loaded_objects` map of result path → loaded document).
 - **`fast` CLI Options**: `--max-depth` and `--header` flags for `stac-validator fast`.
+- **`catalogs`/`collections` Index Endpoint Traversal**: API mode now follows `rel="catalogs"` and `rel="collections"` links, extracting `{id}`-bearing members the same way `rel="data"` collections lists are handled, so catalogs-extension trees are reachable.
+- **API Detection Warning in Recursive Mode**: `run_recursive()` now warns when the root document looks like a STAC API (`conformsTo`), since only `child`/`item` links are traversed there; use `--api`/`run_api()` to traverse API links.
+
+### Changed
+
+- **`quiet` Silences Validation Summaries**: `run_recursive()` and `run_api()` no longer print the summary and invalid-objects report when `quiet` is set; `valid` and `message` are unaffected.
 
 ### Fixed
 
+- **Pre-1.0 Type Inference**: documents without a `type` member (STAC <1.0) now infer `collection` (when `extent` is present) or `catalog` instead of reporting `stac_type: "unknown"`. A bare `license` field does not imply `collection`, so pre-1.0 catalogs with licenses classify correctly.
+- **Prefetch Ignored Result Limit**: the collections prefetch no longer fetches `items` pages when the `limit` budget is already consumed by the collections being prefetched.
+- **Prefetch Errors Silently Swallowed**: `items`-page prefetch failures are now logged via `logger.warning` instead of dropped; the link loop still retries and reports failures as before.
+- **Session Shared Across Prefetch Threads**: parallel prefetch workers now use per-thread `requests.Session` replicas instead of sharing the module-global session, which is not documented thread-safe.
+- **Non-Object Root Documents**: `run()`, `run_recursive()`, and `run_api()` now return a structured failure when the root document parses to a non-object JSON value instead of raising an attribute error.
 - **Root Load Failures Produce Structured Results**: `run()`, `run_recursive()`, and `run_api()` now append a structured error result (`error_message`, `stac_type`, `stac_version`) to `message` when the root document cannot be loaded, instead of only printing to stdout and leaving `message` empty.
 - **Remote Link Resolution Corrupting URLs**: `FastValidator` no longer mangles absolute URL bases (e.g., `https:/host/...`) when resolving relative `href`s; `http(s)` documents now resolve links with `urljoin`.
 - **`rel="next"` Pagination Never Followed**: API mode now follows `next` links in `items`/`collections` responses and on regular nodes, with a per-endpoint page cap and `visited` dedup, instead of silently validating page 1 only.
