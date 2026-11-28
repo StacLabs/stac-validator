@@ -2,6 +2,7 @@ import io
 import json
 import logging
 import os
+import posixpath
 import re
 import tempfile
 import threading
@@ -9,7 +10,7 @@ import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import click
 import fastjsonschema  # type: ignore
@@ -850,16 +851,37 @@ class FastValidator:
             validate_with_ref_resolver(ext_schema, item)
 
     @staticmethod
+    def _canonical_url(url: str) -> str:
+        """Canonicalize a URL's spelling for `visited` dedup.
+
+        Lowercases scheme and host, strips the default port, resolves
+        dot-segments, and collapses duplicate and trailing slashes via
+        posixpath.normpath (os.path would use "\\" separators on
+        Windows). Query strings and fragments are kept verbatim so
+        pagination parameters stay distinct.
+        """
+        parts = urlsplit(url)
+        scheme = parts.scheme.lower()
+        netloc = parts.netloc.lower()
+        default_port = {"http": ":80", "https": ":443"}.get(scheme)
+        if default_port and netloc.endswith(default_port):
+            netloc = netloc[: -len(default_port)]
+        path = posixpath.normpath(parts.path or "/")
+        return urlunsplit((scheme, netloc, path, parts.query, parts.fragment))
+
+    @staticmethod
     def _resolve_link_path(file_path: str, href: str) -> str:
         """Resolve a link href relative to the document containing it.
 
         os.path.normpath collapses "//" to "/", which corrupts URLs like
         "https://host" into "https:/host", so URL bases use urljoin instead.
+        Resolved URLs are canonicalized so differently-spelled references
+        to the same resource dedup in `visited`.
         """
         if href.startswith("http"):
-            return href
+            return FastValidator._canonical_url(href)
         if file_path.startswith("http"):
-            return urljoin(file_path, href)
+            return FastValidator._canonical_url(urljoin(file_path, href))
         return os.path.normpath(os.path.join(os.path.dirname(file_path), href))
 
     def _session_for_current_thread(self) -> requests.Session:
@@ -943,7 +965,9 @@ class FastValidator:
         return results_parallel
 
     def _prefetch_api_collection_resources(
-        self, collection_url: str, remaining_capacity: Optional[int] = None
+        self,
+        collection_url: str,
+        include_items: bool = True,
     ) -> Tuple[str, Optional[Dict[str, Dict[str, Any]]], Optional[Exception]]:
         try:
             collection_data = self._load_json_resource(collection_url)
@@ -952,8 +976,10 @@ class FastValidator:
 
         resources = {collection_url: collection_data}
 
-        # Don't fetch items pages when the result limit is already exhausted
-        if remaining_capacity is not None and remaining_capacity <= 0:
+        # Don't fetch items pages that would fall outside the depth
+        # cap, or under a result limit where they are loaded on demand
+        # instead
+        if not include_items:
             return collection_url, resources, None
 
         for link in collection_data.get("links", []):
@@ -978,13 +1004,11 @@ class FastValidator:
     def _prefetch_api_collection_resources_batch(
         self,
         collection_urls: List[str],
-        remaining_capacity: Optional[int] = None,
+        include_items: bool = True,
     ) -> List[Tuple[str, Optional[Dict[str, Dict[str, Any]]], Optional[Exception]]]:
         if len(collection_urls) <= 1:
             return [
-                self._prefetch_api_collection_resources(
-                    collection_url, remaining_capacity
-                )
+                self._prefetch_api_collection_resources(collection_url, include_items)
                 for collection_url in collection_urls
             ]
 
@@ -999,7 +1023,7 @@ class FastValidator:
                 executor.submit(
                     self._prefetch_api_collection_resources,
                     collection_url,
-                    remaining_capacity,
+                    include_items,
                 )
                 for collection_url in collection_urls
             ]
@@ -1446,7 +1470,7 @@ class FastValidator:
         try:
             root_data = self._load_json_resource(self.stac_file)
             root_path = (
-                self.stac_file
+                self._canonical_url(self.stac_file)
                 if self.stac_file.startswith("http")
                 else os.path.abspath(self.stac_file)
             )
@@ -1572,7 +1596,7 @@ class FastValidator:
         try:
             root_data = self._load_json_resource(self.stac_file)
             root_path = (
-                self.stac_file
+                self._canonical_url(self.stac_file)
                 if self.stac_file.startswith("http")
                 else os.path.abspath(self.stac_file)
             )
@@ -1963,32 +1987,54 @@ class FastValidator:
                                     collection_id = collection.get("id")
                                     if collection_id:
                                         collection_urls.append(
-                                            f"{page_path.split('?')[0].rstrip('/')}/{collection_id}"
+                                            self._canonical_url(
+                                                f"{page_path.split('?')[0].rstrip('/')}/{collection_id}"
+                                            )
                                         )
+
+                                # Skip members already validated via
+                                # another page or endpoint so they are
+                                # not refetched or validated twice
+                                collection_urls = [
+                                    url
+                                    for url in dict.fromkeys(collection_urls)
+                                    if url not in visited
+                                ]
 
                                 # Avoid prefetching beyond remaining validation capacity.
                                 if self.limit is not None:
-                                    remaining = max(1, self.limit - len(results))
+                                    remaining = max(0, self.limit - len(results))
                                     collection_urls = collection_urls[:remaining]
 
-                                # The collections being prefetched consume the
-                                # remaining slots themselves, so items pages
-                                # are only fetched when capacity is left over
-                                remaining_capacity = None
-                                if self.limit is not None:
-                                    remaining_capacity = (
-                                        self.limit - len(results) - len(collection_urls)
-                                    )
+                                # Items land at depth + 2; when the depth
+                                # cap excludes them their pages would be
+                                # fetched and discarded, so skip prefetch.
+                                # Under a result limit each collection's
+                                # items page yields a variable number of
+                                # results, so members beyond the limit are
+                                # prefetched but never validated; items are
+                                # loaded on demand inside the member's own
+                                # link loop instead.
+                                include_items = self.limit is None and (
+                                    self.max_depth is None or depth + 2 < self.max_depth
+                                )
 
                                 for (
                                     collection_url,
                                     prefetched_collection_resources,
                                     load_error,
                                 ) in self._prefetch_api_collection_resources_batch(
-                                    collection_urls, remaining_capacity
+                                    collection_urls,
+                                    include_items,
                                 ):
                                     if self._limit_reached(results):
                                         break
+
+                                    # A member earlier in this batch may
+                                    # have reached this URL through its
+                                    # own link walk
+                                    if collection_url in visited:
+                                        continue
 
                                     if load_error is not None:
                                         results.append(
@@ -2060,7 +2106,14 @@ class FastValidator:
                                     break
                                 page_path = next_path
                                 pages_followed += 1
-                                collections = page_data.get("collections", [])
+                                # Index pages may key members under either
+                                # "collections" or "catalogs" - same as the
+                                # first page
+                                collections = page_data.get(
+                                    "collections"
+                                ) or page_data.get("catalogs")
+                                if not isinstance(collections, list):
+                                    collections = []
                         else:
                             # Not a collections list, validate as normal
                             self._validate_recursive(

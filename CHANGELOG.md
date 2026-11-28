@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+## [v4.7.1] - 2026-11-28
+
+### Fixed
+
+- API collection prefetch no longer fetches `rel=items` pages when the items would fall outside `max_depth` and never be validated — on a `--max-depth 2` walk this saves one request per collection (hundreds on large APIs under rate limits)
+- API collection/catalog prefetch no longer refetches and revalidates a member URL that was already visited — e.g. a collection repeated across paginated index pages or reached earlier through a `child`/`item` link — avoiding duplicate `message` entries and wasted requests
+- `visited` dedup now compares canonicalized URLs — lowercased scheme/host, default port stripped, `..` segments resolved, duplicate and trailing slashes collapsed — so a resource reachable under different spellings (e.g. an index member URL vs. a `child` link containing `..`) is fetched and validated once. Reported `path` values are the canonical form
+- Under a result `limit`, API prefetch no longer eagerly fetches `rel=items` pages for every index member — items pages yield a variable number of results, so the batch would fetch pages for collections the limit never reaches. Items now load on demand inside each validated collection's own link loop. `limit` bounds the number of validated results, not the number of requests
+- Paginated `catalogs` index endpoints no longer silently drop members after the first page — page advancement only read the `collections` key, so `catalogs`-keyed pages ended the walk early
+
 ## [v4.7.0] - 2026-11-27
 
 ### Added
@@ -553,7 +565,8 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 - With the newest version - 1.0.0-beta.2 - items will run through jsonchema validation before the PySTAC validation. The reason for this is that jsonschema will give more informative error messages. This should be addressed better in the future. This is not the case with the --recursive option as time can be a concern here with larger collections.
 - Logging. Various additions were made here depending on the options selected. This was done to help assist people to update their STAC collections.
 
-[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.7.0..main
+[Unreleased]: https://github.com/sparkgeo/stac-validator/compare/v4.7.1..main
+[v4.7.1]: https://github.com/sparkgeo/stac-validator/compare/v4.7.0..v4.7.1
 [v4.7.0]: https://github.com/sparkgeo/stac-validator/compare/v4.6.4..v4.7.0
 [v4.6.4]: https://github.com/sparkgeo/stac-validator/compare/v4.6.3..v4.6.4
 [v4.6.3]: https://github.com/sparkgeo/stac-validator/compare/v4.6.2..v4.6.3

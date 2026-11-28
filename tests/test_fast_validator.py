@@ -436,7 +436,7 @@ class TestFastValidatorRecursiveAndApi:
 
         captured = []
 
-        def _fake_prefetch(self, collection_urls, remaining_capacity=None):
+        def _fake_prefetch(self, collection_urls, include_items=True):
             captured.extend(collection_urls)
             return []
 
@@ -796,6 +796,31 @@ class TestFastValidatorRecursiveAndApi:
             == "https://other.example.com/x"
         )
         assert resolve("/root/catalog.json", "./child/c.json") == "/root/child/c.json"
+
+    def test_canonical_url_normalizes_spelling(self):
+        """Equivalent URL spellings canonicalize identically for dedup."""
+        canon = FastValidator._canonical_url
+        assert canon("HTTP://EXAMPLE.COM:80/a//b/../c/") == "http://example.com/a/c"
+        assert canon("https://example.com:443/x") == "https://example.com/x"
+        assert canon("https://example.com:8443/x") == "https://example.com:8443/x"
+        assert canon("https://example.com") == "https://example.com/"
+        # Query strings and fragments are preserved verbatim
+        assert (
+            canon("https://example.com/x?page=2&token=a%20b#frag")
+            == "https://example.com/x?page=2&token=a%20b#frag"
+        )
+
+    def test_resolve_link_path_canonicalizes(self):
+        """Resolved URLs come back in canonical form for visited dedup."""
+        resolve = FastValidator._resolve_link_path
+        assert (
+            resolve("https://api.example.com/a", "https://api.example.com/p/../q/")
+            == "https://api.example.com/q"
+        )
+        assert (
+            resolve("https://api.example.com/a", "//api.example.com:443/x/")
+            == "https://api.example.com/x"
+        )
 
     def test_api_mode_relative_child_links(self, monkeypatch):
         """Relative hrefs under a remote base must not be corrupted to 'https:/host'."""
@@ -1293,6 +1318,492 @@ class TestFastValidatorRecursiveAndApi:
         assert items_url not in fetched
         assert len(fv.message) == 2
 
+    def test_prefetch_skips_items_beyond_max_depth(self, monkeypatch):
+        """Prefetch does not fetch items pages the depth cap would exclude."""
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+
+        items_url = "https://api.example.com/collections/demo-collection/items"
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {"rel": "data", "href": "https://api.example.com/collections"}
+                ],
+            },
+            "https://api.example.com/collections": {
+                "collections": [{"id": "demo-collection"}],
+            },
+            "https://api.example.com/collections/demo-collection": {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": "demo-collection",
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [{"rel": "items", "href": items_url}],
+            },
+            # items_url deliberately absent: if prefetch fetched it,
+            # _fake_get would raise
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True, max_depth=2)
+        fv.run_api()
+
+        assert items_url not in fetched
+        # root + collection are still validated; items are excluded by the cap
+        assert len(fv.message) == 2
+
+    def test_prefetch_fetches_items_within_max_depth(self, monkeypatch):
+        """With room under the depth cap, items pages are still prefetched."""
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+
+        items_url = "https://api.example.com/collections/demo-collection/items"
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {"rel": "data", "href": "https://api.example.com/collections"}
+                ],
+            },
+            "https://api.example.com/collections": {
+                "collections": [{"id": "demo-collection"}],
+            },
+            "https://api.example.com/collections/demo-collection": {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": "demo-collection",
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [{"rel": "items", "href": items_url}],
+            },
+            items_url: {
+                "type": "FeatureCollection",
+                "features": [],
+                "links": [],
+            },
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True, max_depth=3)
+        fv.run_api()
+
+        assert items_url in fetched
+
+    def test_prefetch_skips_items_beyond_max_depth_nested_catalogs(self, monkeypatch):
+        """On catalogs-extension chains, items pages past the depth cap
+        are not prefetched at any nesting level."""
+        items_url = "https://api.example.com/cat1-collections/c1/items"
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {
+                        "rel": "catalogs",
+                        "href": "https://api.example.com/catalogs-idx",
+                    }
+                ],
+            },
+            "https://api.example.com/catalogs-idx": {
+                "catalogs": [{"id": "cat1"}],
+            },
+            # sub-catalog at depth 1, linking its collections index
+            "https://api.example.com/catalogs-idx/cat1": {
+                "stac_version": "1.0.0",
+                "type": "Catalog",
+                "id": "cat1",
+                "links": [
+                    {
+                        "rel": "collections",
+                        "href": "https://api.example.com/cat1-collections",
+                    }
+                ],
+            },
+            "https://api.example.com/cat1-collections": {
+                "collections": [{"id": "c1"}],
+            },
+            # collection at depth 2; its items would land at depth 3
+            "https://api.example.com/cat1-collections/c1": {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": "c1",
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [{"rel": "items", "href": items_url}],
+            },
+            # items_url deliberately absent: if prefetch fetched it,
+            # _fake_get would raise
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True, max_depth=3)
+        fv.run_api()
+
+        assert items_url not in fetched
+        # collections at depth 2 are still validated
+        assert any(m["path"].endswith("/c1") for m in fv.message)
+
+    def test_prefetch_fetches_items_under_max_depth_nested_catalogs(self, monkeypatch):
+        """Items pages are still prefetched on catalogs-extension chains
+        when items land inside the depth cap."""
+        items_url = "https://api.example.com/cat1-collections/c1/items"
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {
+                        "rel": "catalogs",
+                        "href": "https://api.example.com/catalogs-idx",
+                    }
+                ],
+            },
+            "https://api.example.com/catalogs-idx": {
+                "catalogs": [{"id": "cat1"}],
+            },
+            "https://api.example.com/catalogs-idx/cat1": {
+                "stac_version": "1.0.0",
+                "type": "Catalog",
+                "id": "cat1",
+                "links": [
+                    {
+                        "rel": "collections",
+                        "href": "https://api.example.com/cat1-collections",
+                    }
+                ],
+            },
+            "https://api.example.com/cat1-collections": {
+                "collections": [{"id": "c1"}],
+            },
+            "https://api.example.com/cat1-collections/c1": {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": "c1",
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [{"rel": "items", "href": items_url}],
+            },
+            items_url: {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "stac_version": "1.0.0",
+                        "id": "i1",
+                        "geometry": None,
+                        "properties": {"datetime": "2023-01-01T00:00:00Z"},
+                        "links": [],
+                        "assets": {},
+                    }
+                ],
+            },
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True, max_depth=4)
+        fv.run_api()
+
+        assert items_url in fetched
+
+    def test_prefetch_dedupes_collection_members_across_pages(self, monkeypatch):
+        """A collection repeated on paginated index pages is fetched and
+        validated only once."""
+        coll_url = "https://api.example.com/collections/c1"
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {
+                        "rel": "data",
+                        "href": "https://api.example.com/collections",
+                    }
+                ],
+            },
+            "https://api.example.com/collections": {
+                "collections": [{"id": "c1"}, {"id": "c1"}],
+                "links": [
+                    {
+                        "rel": "next",
+                        "href": "https://api.example.com/collections?page=2",
+                    }
+                ],
+            },
+            "https://api.example.com/collections?page=2": {
+                "collections": [{"id": "c1"}, {"id": "c2"}],
+            },
+            coll_url: {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": "c1",
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [],
+            },
+            "https://api.example.com/collections/c2": {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": "c2",
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [],
+            },
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True)
+        fv.run_api()
+
+        # c1 is listed twice on page 1 and again on page 2
+        assert fetched.count(coll_url) == 1
+        assert len([m for m in fv.message if m["path"] == coll_url]) == 1
+        assert any(m["path"].endswith("/c2") for m in fv.message)
+
+    def test_prefetch_skips_items_pages_under_limit(self, monkeypatch):
+        """Under a result limit, items pages are not eagerly prefetched for
+        every member; they load on demand only for collections that are
+        actually validated."""
+        items_c1 = "https://api.example.com/collections/c1/items"
+        items_c2 = "https://api.example.com/collections/c2/items"
+        items_c3 = "https://api.example.com/collections/c3/items"
+
+        def _collection(cid, items_url):
+            return {
+                "stac_version": "1.0.0",
+                "type": "Collection",
+                "id": cid,
+                "license": "MIT",
+                "extent": {
+                    "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                    "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+                },
+                "links": [{"rel": "items", "href": items_url}],
+            }
+
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {"rel": "data", "href": "https://api.example.com/collections"}
+                ],
+            },
+            "https://api.example.com/collections": {
+                "collections": [{"id": "c1"}, {"id": "c2"}, {"id": "c3"}],
+            },
+            "https://api.example.com/collections/c1": _collection("c1", items_c1),
+            "https://api.example.com/collections/c2": _collection("c2", items_c2),
+            "https://api.example.com/collections/c3": _collection("c3", items_c3),
+            items_c1: {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "stac_version": "1.0.0",
+                        "id": "i1",
+                        "geometry": None,
+                        "properties": {"datetime": "2023-01-01T00:00:00Z"},
+                        "links": [],
+                        "assets": {},
+                    }
+                ],
+            },
+            # items_c2/items_c3 deliberately absent: fetching them raises
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        # limit=3: root + c1 + one item consume the results; c2/c3 never
+        # validate so their items pages must never be requested
+        fv = FastValidator("https://api.example.com", quiet=True, limit=3)
+        fv.run_api()
+
+        assert items_c1 in fetched
+        assert items_c2 not in fetched
+        assert items_c3 not in fetched
+        assert len(fv.message) == 3
+
     def test_api_mode_catalogs_rel_traversal(self, monkeypatch):
         """rel=catalogs index endpoints are traversed like rel=data."""
 
@@ -1367,6 +1878,161 @@ class TestFastValidatorRecursiveAndApi:
         assert fv.valid is True
         ids = [r["id"] for r in fv.message]
         assert ids == ["api-root", "sub-catalog", "demo-collection"]
+
+    def test_api_mode_catalogs_index_pagination(self, monkeypatch):
+        """Paginated rel=catalogs indexes follow next pages and validate
+        catalogs members from every page."""
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {"rel": "catalogs", "href": "https://api.example.com/catalogs"}
+                ],
+            },
+            "https://api.example.com/catalogs": {
+                "catalogs": [{"id": "cat1"}],
+                "links": [
+                    {
+                        "rel": "next",
+                        "href": "https://api.example.com/catalogs?page=2",
+                    }
+                ],
+            },
+            "https://api.example.com/catalogs?page=2": {
+                "catalogs": [{"id": "cat2"}],
+            },
+            "https://api.example.com/catalogs/cat1": {
+                "stac_version": "1.0.0",
+                "type": "Catalog",
+                "id": "cat1",
+                "description": "catalog one",
+                "links": [],
+            },
+            "https://api.example.com/catalogs/cat2": {
+                "stac_version": "1.0.0",
+                "type": "Catalog",
+                "id": "cat2",
+                "description": "catalog two",
+                "links": [],
+            },
+        }
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True)
+        fv.run_api()
+
+        assert fv.valid is True
+        ids = [r["id"] for r in fv.message]
+        assert ids == ["api-root", "cat1", "cat2"]
+
+    def test_api_mode_dedups_differently_spelled_urls(self, monkeypatch):
+        """A resource reachable under differently-spelled URLs is fetched
+        and validated only once."""
+
+        def _ok_validator(data):
+            return None
+
+        monkeypatch.setattr(
+            "stac_validator.fast_validator.get_validator",
+            lambda *args, **kwargs: (_ok_validator, True),
+        )
+
+        c1_doc = {
+            "stac_version": "1.0.0",
+            "type": "Collection",
+            "id": "c1",
+            "license": "MIT",
+            "extent": {
+                "spatial": {"bbox": [[-180, -90, 180, 90]]},
+                "temporal": {"interval": [["2023-01-01T00:00:00Z", None]]},
+            },
+            "links": [],
+        }
+        payloads = {
+            "https://api.example.com": {
+                "conformsTo": ["https://api.stacspec.org/v1.0.0/core"],
+                "id": "api-root",
+                "type": "Catalog",
+                "links": [
+                    {
+                        "rel": "data",
+                        "href": "https://api.example.com/collections",
+                    },
+                    # The same collection reachable under other spellings
+                    {
+                        "rel": "child",
+                        "href": "https://api.example.com/collections/../collections/c1",
+                    },
+                    {
+                        "rel": "child",
+                        "href": "https://api.example.com/collections/c1/",
+                    },
+                ],
+            },
+            "https://api.example.com/collections": {
+                "collections": [{"id": "c1"}],
+            },
+            "https://api.example.com/collections/c1": c1_doc,
+            # Pre-canonicalization spellings would resolve to the same doc
+            "https://api.example.com/collections/../collections/c1": c1_doc,
+            "https://api.example.com/collections/c1/": c1_doc,
+        }
+
+        fetched = []
+
+        class _Response:
+            def __init__(self, data):
+                self._data = data
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._data
+
+        def _fake_get(url, timeout=15):
+            fetched.append(url)
+            if url not in payloads:
+                raise RuntimeError(f"Unexpected URL: {url}")
+            return _Response(payloads[url])
+
+        monkeypatch.setattr("stac_validator.fast_validator.HTTP_SESSION.get", _fake_get)
+
+        fv = FastValidator("https://api.example.com", quiet=True)
+        fv.run_api()
+
+        assert fv.valid is True
+        assert [r["id"] for r in fv.message] == ["api-root", "c1"]
+        assert fetched.count("https://api.example.com/collections/c1") == 1
+        assert "https://api.example.com/collections/../collections/c1" not in fetched
+        assert "https://api.example.com/collections/c1/" not in fetched
 
     def test_quiet_suppresses_summary(self, monkeypatch, capsys):
         """quiet=True silences the validation summary output."""
