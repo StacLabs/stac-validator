@@ -6,9 +6,13 @@ The format is (loosely) based on [Keep a Changelog](http://keepachangelog.com/) 
 
 ## Unreleased
 
+## [v4.7.1] - 2026-11-28
+
 ### Fixed
 
 - API collection prefetch no longer fetches `rel=items` pages when the items would fall outside `max_depth` and never be validated — on a `--max-depth 2` walk this saves one request per collection (hundreds on large APIs under rate limits)
+- API collection/catalog prefetch no longer refetches and revalidates a member URL that was already visited — e.g. a collection repeated across paginated index pages or reached earlier through a `child`/`item` link — avoiding duplicate `message` entries and wasted requests
+- Under a result `limit`, API prefetch no longer eagerly fetches `rel=items` pages for every index member — items pages yield a variable number of results, so the batch would fetch pages for collections the limit never reaches. Items now load on demand inside each validated collection's own link loop. `limit` bounds the number of validated results, not the number of requests
 
 ## [v4.7.0] - 2026-11-27
 

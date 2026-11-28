@@ -1975,6 +1975,15 @@ class FastValidator:
                                             f"{page_path.split('?')[0].rstrip('/')}/{collection_id}"
                                         )
 
+                                # Skip members already validated via
+                                # another page or endpoint so they are
+                                # not refetched or validated twice
+                                collection_urls = [
+                                    url
+                                    for url in dict.fromkeys(collection_urls)
+                                    if url not in visited
+                                ]
+
                                 # Avoid prefetching beyond remaining validation capacity.
                                 if self.limit is not None:
                                     remaining = max(1, self.limit - len(results))
@@ -1991,8 +2000,14 @@ class FastValidator:
 
                                 # Items land at depth + 2; when the depth
                                 # cap excludes them their pages would be
-                                # fetched and discarded, so skip prefetch
-                                include_items = (
+                                # fetched and discarded, so skip prefetch.
+                                # Under a result limit each collection's
+                                # items page yields a variable number of
+                                # results, so members beyond the limit are
+                                # prefetched but never validated; items are
+                                # loaded on demand inside the member's own
+                                # link loop instead.
+                                include_items = self.limit is None and (
                                     self.max_depth is None or depth + 2 < self.max_depth
                                 )
 
@@ -2007,6 +2022,12 @@ class FastValidator:
                                 ):
                                     if self._limit_reached(results):
                                         break
+
+                                    # A member earlier in this batch may
+                                    # have reached this URL through its
+                                    # own link walk
+                                    if collection_url in visited:
+                                        continue
 
                                     if load_error is not None:
                                         results.append(
